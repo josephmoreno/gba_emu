@@ -8,4 +8,3 @@ References:
 
 Purpose of this project:\
 Study and learn the architecture of the Gameboy Advance\
-\
