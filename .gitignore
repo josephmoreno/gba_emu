@@ -1,3 +1,5 @@
 *.exe
+*.pdf
+*.gba
 debug/
 .vscode
