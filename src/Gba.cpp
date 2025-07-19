@@ -24,9 +24,11 @@ uint32_t Gba::reg[Reg::REG_COUNT];
 
 bool Gba::debug = false;
 
+// * See 3.11: Reset; SVC mode, sets I, F, and clears T bit in CPSR, PC = 0
 void Gba::init(bool debug) {
     Gba::debug = debug;
-    reg[CPSR] = 0x00000010; // N, Z, C, V flags 0; USR Mode
+    reg[PC] =0x08000000;
+    reg[CPSR] = 0x00000030; // N, Z, C, V flags 0; USR Mode
 };
 
 bool Gba::insertRom(std::string path) {
@@ -62,11 +64,24 @@ bool Gba::insertRom(std::string path) {
     }
 };
 
-uint32_t Gba::fetch() {
+uint32_t Gba::armFetch() {
     // Little endian
-    uint32_t w = (pak_rom[0][reg[PC] + 3] << 24) | (pak_rom[0][reg[PC] + 2] << 16) | (pak_rom[0][reg[PC] + 1] << 8) | pak_rom[0][reg[PC]];
-    if ((reg[PC] + 4) < pak_size) reg[PC] += 4;
+    // uint32_t w = (pak_rom[0][reg[PC] + 3] << 24) | (pak_rom[0][reg[PC] + 2] << 16) | (pak_rom[0][reg[PC] + 1] << 8) | pak_rom[0][reg[PC]];
+    // if ((reg[PC] + 4) < pak_size) reg[PC] += 4;
+
+    uint32_t w = (memRef(reg[PC] + 3) << 24) | (memRef(reg[PC] + 2) << 16) | (memRef(reg[PC] + 1) << 8) | memRef(reg[PC]);
+    if (((reg[PC] - pak_rom0_offset) + 4) < pak_size) reg[PC] += 4;
     return(w);
+};
+
+uint16_t Gba::thumbFetch() {
+    // Little endian
+    // uint16_t half_w = (pak_rom[0][reg[PC] + 1] << 8) | pak_rom[0][reg[PC]];
+    // if ((reg[PC] + 2) < pak_size) reg[PC] += 2;
+
+    uint16_t half_w = (memRef(reg[PC] + 1) << 8) | memRef(reg[PC]);
+    if (((reg[PC] - pak_rom0_offset) + 2) < pak_size) reg[PC] += 2;
+    return(half_w);
 };
 
 void Gba::armDecode(uint32_t w) {
@@ -90,7 +105,7 @@ void Gba::armDecode(uint32_t w) {
         0xe = "always true"
     */
 
-    if (debug) printf("w = %x\n", w);
+    if (debug) printf("w = %x, ARM state\n", w);
 
     uint32_t instr_code = w & 0x0ffffff0;
     uint8_t cpsr_cond = reg[CPSR] >> 28;
@@ -279,10 +294,82 @@ void Gba::armDecode(uint32_t w) {
 
 void Gba::thumbDecode(uint16_t half_w) {
     // Only branch instruction is capable of conditional execution
+
+    if (debug) printf("half_w = %x, THUMB state\n", half_w);
+
+    uint16_t instr_code = half_w & 0xff00;
+
+    if (instr_code == 0xdf00) {
+        // Software Interrupt
+        if (debug) std::cout << "Software Interrupt" << std::endl;
+    }else if (instr_code == 0xb000) {
+        // Add offset to stack pointer
+        if (debug) std::cout << "Add offset to stack pointer" << std::endl;
+    }else if ((instr_code & 0xf600) == 0xb400) {
+        // Push/pop registers
+        if (debug) std::cout << "Push/pop registers" << std::endl;
+    }else if ((instr_code & 0xf200) == 0x5000) {
+        // Load/store with register offset
+        if (debug) std::cout << "Load/store with register offset" << std::endl;
+    }else if ((instr_code & 0xf200) == 0x5200) {
+        // Load/store sign-extended byte/half-word
+        if (debug) std::cout << "Load/store sign-extended byte/half-word" << std::endl;
+    }else if ((instr_code & 0xfc00) == 0x4000) {
+        // ALU operations
+        if (debug) std::cout << "ALU operations" << std::endl;
+    }else if ((instr_code & 0xfc00) == 0x4400) {
+        // High register operations / branch exchange
+        if (debug) std::cout << "High register operations / branch exchange" << std::endl;
+    }else if ((instr_code & 0xf800) == 0x1800) {
+        // Add/subtract
+        if (debug) std::cout << "Add/subtract" << std::endl;
+    }else if ((instr_code & 0xf800) == 0x4800) {
+        // PC-relative load
+        if (debug) std::cout << "PC-relative load" << std::endl;
+    }else if ((instr_code & 0xf800) == 0xe000) {
+        // Unconditional branch
+        if (debug) std::cout << "Unconditional branch" << std::endl;
+    }else {
+        instr_code = instr_code & 0xf000;
+
+        if (instr_code == 0xf000) {
+            // Long branch with link
+            if (debug) std::cout << "Long branch with link" << std::endl;
+        }else if (instr_code == 0xd000) {
+            // Conditional branch
+            if (debug) std::cout << "Conditional branch" << std::endl;
+        }else if (instr_code == 0xa000) {
+            // Load address
+            if (debug) std::cout << "Load address" << std::endl;
+        }else if (instr_code == 0x9000) {
+            // SP-relative load/store
+            if (debug) std::cout << "SP-relative load/store" << std::endl;
+        }else if (instr_code == 0x8000) {
+            // Load/store half-word
+            if (debug) std::cout << "Load/store half-word" << std::endl;
+        }else {
+            instr_code = instr_code & 0xe000;
+
+            if (instr_code == 0x6000) {
+                // Load/store with immediate offset
+                if (debug) std::cout << "Load/store with immediate offset" << std::endl;
+            }else if (instr_code == 0x2000) {
+                // Move/compare/add/subtract immediate
+                if (debug) std::cout << "Move/compare/add/subtract immediate" << std::endl;
+            }else if (instr_code == 0x0000) {
+                // Move shifted register
+                if (debug) std::cout << "Move shifted register" << std::endl;
+            }
+        }
+    }
 };
 
 void Gba::cycle() {
-    armDecode(fetch());
+    bool thumb = ((reg[CPSR] & 0x00000020) == 0x00000020);
+    if (thumb)
+        thumbDecode(thumbFetch());
+    else
+        armDecode(armFetch());
 };
 
 // -- BEGIN Helper Functions
@@ -312,6 +399,31 @@ uint32_t& Gba::regRef(uint8_t reg_num) {
         }
     }else
         return(reg[reg_num]);
+};
+
+uint8_t& Gba::memRef(uint32_t addr) {
+    if (addr >= sys_rom_offset && addr <= sys_rom_offset + sys_rom_size)
+        return(sys_rom[addr]);
+    else if (addr >= ob_wram_offset && addr <= ob_wram_offset + ob_wram_size)
+        return(ob_wram[addr - ob_wram_offset]);
+    else if (addr >= oc_wram_offset && addr <= oc_wram_offset + oc_wram_size)
+        return(oc_wram[addr - oc_wram_offset]);
+    else if (addr >= io_ram_offset && addr <= io_ram_offset + io_ram_size)
+        return(io_ram[addr - io_ram_offset]);
+    else if (addr >= palette_ram_offset && addr <= palette_ram_offset + palette_ram_size)
+        return(palette_ram[addr - palette_ram_offset]);
+    else if (addr >= vram_offset && addr <= vram_offset + vram_size)
+        return(vram[addr - vram_offset]);
+    else if (addr >= oam_offset && addr <= oam_offset + oam_size)
+        return(oam[addr - oam_offset]);
+    else if (addr >= pak_rom0_offset && addr <= pak_rom0_offset + pak_size)
+        return(pak_rom[0][addr - pak_rom0_offset]);
+    else if (addr >= pak_rom1_offset && addr <= pak_rom1_offset + pak_size)
+        return(pak_rom[1][addr - pak_rom1_offset]);
+    else if (addr >= pak_rom2_offset && addr <= pak_rom2_offset + pak_size)
+        return(pak_rom[2][addr - pak_rom2_offset]);
+    else
+        return(pak_sram[addr - pak_sram_offset]);
 };
 
 uint32_t Gba::armDpOp2(uint32_t w) {

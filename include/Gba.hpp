@@ -15,12 +15,19 @@ struct Gba {
     static uint16_t display[];  // 15-bit colors
 
     // Internal memory
+    static constexpr uint32_t sys_rom_offset = 0;
     static constexpr uint32_t sys_rom_size = 16383;
+    static constexpr uint32_t ob_wram_offset = 0x02000000;
     static constexpr uint32_t ob_wram_size = 262143;
+    static constexpr uint32_t oc_wram_offset = 0x03000000;
     static constexpr uint32_t oc_wram_size = 32767;
+    static constexpr uint32_t io_ram_offset = 0x04000000;
     static constexpr uint32_t io_ram_size = 1022;
+    static constexpr uint32_t palette_ram_offset = 0x05000000;
     static constexpr uint32_t palette_ram_size = 1023;
+    static constexpr uint32_t vram_offset = 0x06000000;
     static constexpr uint32_t vram_size = 98303;
+    static constexpr uint32_t oam_offset = 0x07000000;
     static constexpr uint32_t oam_size = 1023;
 
     static uint8_t sys_rom[];       // 0x0000_0000 - 0x0000_3fff, 16kB
@@ -32,11 +39,15 @@ struct Gba {
     static uint8_t oam[];           // 0x0700_0000 - 0x0700_03ff, 1kB, "object attributes memory"
 
     // External memory
+    static constexpr uint32_t pak_rom0_offset = 0x08000000;
+    static constexpr uint32_t pak_rom1_offset = 0x0a000000;
+    static constexpr uint32_t pak_rom2_offset = 0x0c000000;
+    static uint32_t pak_size;
+    static constexpr uint32_t pak_sram_offset = 0x0e000000;
     static constexpr uint32_t pak_sram_size = 65535;
 
     static uint8_t* pak_rom[];  // 0x0800_0000 - 0x09ff_ffff, 0x0a00_0000 - 0x0bff_ffff, 0x0c00_0000 - 0x0dff_ffff, 32MB each, game pak ROM; going to dynamically allocate because of large max size and pak size varies
     static uint8_t pak_sram[];  // 0x0e00_0000 - 0x0e00_ffff, 64kB, for saved data
-    static uint32_t pak_size;
 
     // ARM CPU Registers
     // CPSR = [N, Z, C, V, -, -, ... , -, I, F, T, M4, M3, M2, M1, M0] * See 3.8: Program Status Registers
@@ -72,13 +83,15 @@ struct Gba {
 
     static void init(bool init);
     static bool insertRom(std::string path);
-    static uint32_t fetch();
+    static uint32_t armFetch();
+    static uint16_t thumbFetch();
     static void armDecode(uint32_t w);
     static void thumbDecode(uint16_t half_w);
     static void cycle();
 
     // Helper Functions
     static uint32_t& regRef(uint8_t reg_num);
+    static uint8_t& memRef(uint32_t addr);
     static uint32_t armDpOp2(uint32_t w);
     static void armLogSetCond(uint32_t res, uint8_t rd);
     static void armAriSetCond(uint32_t res, bool c_flag, bool v_flag, uint8_t rd);
