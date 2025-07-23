@@ -28,7 +28,7 @@ bool Gba::debug = false;
 void Gba::init(bool debug) {
     Gba::debug = debug;
     reg[PC] =0x08000000;
-    reg[CPSR] = 0x00000030; // N, Z, C, V flags 0; USR Mode
+    reg[CPSR] = 0x00000010; // N, Z, C, V flags 0; USR Mode
 };
 
 bool Gba::insertRom(std::string path) {
@@ -125,21 +125,13 @@ void Gba::armDecode(uint32_t w) {
         case 0xa: if ((cpsr_cond & 0x9) == 0x9 || (cpsr_cond & 0x9) == 0x0) cond = true; break; // N == V
         case 0xb: if ((cpsr_cond & 0x9) == 0x1 || (cpsr_cond & 0x9) == 0x8) cond = true; break; // N != V
         case 0xc: // Z clear && (N == V)
-            if (
-                (cpsr_cond & 0x4) == 0x0 && 
-                ((cpsr_cond & 0x9) == 0x9 || (cpsr_cond & 0x9) == 0x0)
-            )
+            if ((cpsr_cond & 0x4) == 0x0 && ((cpsr_cond & 0x9) == 0x9 || (cpsr_cond & 0x9) == 0x0))
                 cond = true;
-            
             break;
 
         case 0xd: // Z set || (N != V)
-            if (
-                (cpsr_cond & 0x4) == 0x4 &&
-                ((cpsr_cond & 0x9) == 0x1 || (cpsr_cond & 0x9) == 0x8)
-            )
+            if ((cpsr_cond & 0x4) == 0x4 && ((cpsr_cond & 0x9) == 0x1 || (cpsr_cond & 0x9) == 0x8))
                 cond = true;
-
             break;
 
         case 0xe: cond = true; break; // Always true
@@ -156,7 +148,7 @@ void Gba::armDecode(uint32_t w) {
         // If operand register's bit 0 == 0, subsequent instructions are ARM; else if 1, THUMB
         
         if (debug) std::cout << "Branch and Exchange" << std::endl;
-        // if (cond) armBx(static_cast<uint8_t>(w & 0x0000000f));
+        if (cond) armBx(static_cast<uint8_t>(w & 0x0000000f));
 
     }else {
         instr_code = instr_code & 0x0ff00ff0;
@@ -176,17 +168,17 @@ void Gba::armDecode(uint32_t w) {
 
                 if (debug) std::cout << "Multiply" << std::endl;
 
-                // if (cond) {
-                //     uint32_t a = w & 0x00200000;        // Accumulate field
-                //     uint32_t set_cond = w & 0x00100000; // Set condition field
-                //     uint8_t rd = (w & 0x000f0000) >> 16;
-                //     uint32_t op1 = regRef(static_cast<uint8_t>(w & 0x0000000f));
-                //     uint32_t op2 = regRef(static_cast<uint8_t>((w & 0x00000f00) >> 8));
-                //     uint32_t& acc = regRef(static_cast<uint8_t>((w & 0x0000f000) >> 12));
+                if (cond) {
+                    uint32_t a = w & 0x00200000;        // Accumulate field
+                    uint32_t set_cond = w & 0x00100000; // Set condition field
+                    uint8_t rd = (w & 0x000f0000) >> 16;
+                    uint32_t op1 = regRef(static_cast<uint8_t>(w & 0x0000000f));
+                    uint32_t op2 = regRef(static_cast<uint8_t>((w & 0x00000f00) >> 8));
+                    uint32_t& acc = regRef(static_cast<uint8_t>((w & 0x0000f000) >> 12));
 
-                //     if (a == 0x00000000) armMul((set_cond == 0x00100000), op1, op2, acc, rd); // MUL
-                //     else armMla((set_cond == 0x00100000), op1, op2, acc, rd); // MLA
-                // }
+                    if (a == 0x00000000) armMul((set_cond == 0x00100000), op1, op2, acc, rd); // MUL
+                    else armMla((set_cond == 0x00100000), op1, op2, acc, rd); // MLA
+                }
 
             }else if ((instr_code & 0x0f8000f0) == 0x00800090) {
                 // Multiply Long: MULL and MLAL
@@ -194,14 +186,18 @@ void Gba::armDecode(uint32_t w) {
 
                 if (debug) std::cout << "Multiply Long" << std::endl;
 
-                // if (cond) {
-                //     uint32_t u = w & 0x00400000; // Unsigned field
-                //     uint32_t a = w & 0x00200000; // Accumulate field
-                //     uint32_t set_cond = w & 0x00100000;
-                //     uint8_t rd_h = (w & 0x000f0000) >> 16; // High destination reg
-                //     uint8_t rd_l = (w & 0x0000f000) >> 12; // Low destination reg
-                //     uint32_t op1 = regRef(static_cast<uint8_t>(w & 0x0000000f));
-                // }
+                if (cond) {
+                    bool sign = (w & 0x00400000) == 0x00400000; // Unsigned field; true = signed operands
+                    bool acc = (w & 0x00200000) == 0x00200000;  // Accumulate field
+                    bool set_cond = (w & 0x00100000) == 0x00100000;
+                    uint8_t rd_h = (w & 0x000f0000) >> 16; // High destination reg
+                    uint8_t rd_l = (w & 0x0000f000) >> 12; // Low destination reg
+                    uint32_t op1 = regRef(static_cast<uint8_t>(w & 0x0000000f));
+                    uint32_t op2 = regRef(static_cast<uint8_t>((w & 0x00000f00) >> 8));
+
+                    if (acc) armMlal(set_cond, sign, op1, op2, rd_h, rd_l);
+                    else armMull(set_cond, sign, op1, op2, rd_h, rd_l);
+                }
 
             }else if ((instr_code & 0x0e400090) == 0x00400090) {
                 // Half-Word Data Transfer: Immediate Offset
@@ -211,11 +207,11 @@ void Gba::armDecode(uint32_t w) {
 
                 if (instr_code == 0x0e000000) {
                     // Co-Processor Data Operation
-                    // * Probably don't need, GBA doesn't have co-processor
+                    // * Don't need, GBA doesn't have co-processor
                     if (debug) std::cout << "Co-Processor Data Operation" << std::endl;
                 }else if (instr_code == 0x0e000010) {
                     // Co-Processor Register Transfer
-                    // * Probably don't need, GBA doesn't have co-processor
+                    // * Don't need, GBA doesn't have co-processor
                     if (debug) std::cout << "Co-Processor Register Transfer" << std::endl;
                 }else if ((instr_code & 0x0e000010) == 0x06000010) {
                     // Undefined
@@ -236,55 +232,94 @@ void Gba::armDecode(uint32_t w) {
 
                         if (debug) std::cout << "Branch and Branch with Link" << std::endl;
                         
-                        // if (cond) {
-                        //     uint32_t offset = (w & 0x00ffffff) << 2;    // uint or int, doesn't matter; should overflow into the correct value either way
-                        //     offset = ((offset & 0x02000000) == 0x02000000) ? offset | 0xfc000000 : offset;  // Extending the sign if it is negative
+                        if (cond) {
+                            uint32_t offset = (w & 0x00ffffff) << 2;    // uint or int, doesn't matter; should overflow into the correct value either way
+                            offset = ((offset & 0x02000000) == 0x02000000) ? offset | 0xfc000000 : offset;  // Extending the sign if it is negative
 
-                        //     if ((w & 0x01000000) == 0x01000000) armBl(offset);
-                        //     else armB(offset);
-                        // }
+                            if ((w & 0x01000000) == 0x01000000) armBl(offset);
+                            else armB(offset);
+                        }
 
                     }else if ((instr_code & 0x0e000000) == 0x0c000000) {
                         // Co-Processor Data Transfer
-                        // * Probably don't need, GBA doesn't have co-processor
+                        // * Don't need, GBA doesn't have co-processor
                         if (debug) std::cout << "Co-Processor Data Transfer" << std::endl;
                     }else if ((instr_code & 0x0c000000) == 0x00000000) {
                         // Data Processing / PSR Transfer
-                        // * Ignoring 4.6: PSR Transfer for now
 
                         if (debug) std::cout << "Data Processing / PSR Transfer" << std::endl;
 
-                        // if (cond) {
-                        //     bool set_cond = (w & 0x00100000) == 0x00100000;
-                        //     uint8_t opcode = (w & 0x01e00000) >> 21;
-                        //     uint32_t op1 = regRef(static_cast<uint8_t>((w & 0x000f0000) >> 16));
-                        //     uint32_t op2 = armDpOp2(w);
-                        //     uint8_t rd = (w & 0x0000f000) >> 12; // Destination reg                            
+                        if (cond) {
+                            bool set_cond = (w & 0x00100000) == 0x00100000;
+                            uint8_t opcode = (w & 0x01e00000) >> 21;
+                            uint32_t op1 = regRef(static_cast<uint8_t>((w & 0x000f0000) >> 16));
+                            uint32_t op2 = armDpOp2(w);
+                            uint8_t rd = (w & 0x0000f000) >> 12; // Destination reg                            
 
-                        //     switch(opcode) {
-                        //         case 0x0: armAnd(set_cond, op1, op2, rd); break;    // AND
-                        //         case 0x1: armEor(set_cond, op1, op2, rd); break;    // EOR
-                        //         case 0x2: armSub(set_cond, op1, op2, rd); break;    // SUB
-                        //         case 0x3: armRsb(set_cond, op1, op2, rd); break;    // RSB
-                        //         case 0x4: armAdd(set_cond, op1, op2, rd); break;    // ADD
-                        //         case 0x5: armAdc(set_cond, op1, op2, rd); break;    // ADC
-                        //         case 0x6: armSbc(set_cond, op1, op2, rd); break;    // SBC
-                        //         case 0x7: armRsc(set_cond, op1, op2, rd); break;    // RSC
-                        //         case 0x8: armTst(op1, op2); break;                  // TST; AND operation, result not written to destination reg, S bit is always set
-                        //         case 0x9: armTeq(op1, op2); break;                  // TEQ; EOR operation, result not written to destination reg, S bit is always set
-                        //         case 0xa: armCmp(op1, op2); break;                  // CMP; SUB operation, result not written to destination reg, S bit is always set
-                        //         case 0xb: armCmn(op1, op2); break;                  // CMN; ADD operation, result not written to destination reg, S bit is always set
-                        //         case 0xc: armOrr(set_cond, op1, op2, rd); break;    // ORR
-                        //         case 0xd: armMov(set_cond, op2, rd); break;         // MOV
-                        //         case 0xe: armBic(set_cond, op1, op2, rd); break;    // BIC
-                        //         case 0xf: armMvn(set_cond, op2, rd); break;         // MVN
-                        //         default: break;
-                        //     }
-                        // }
+                            switch(opcode) {
+                                case 0x0: armAnd(set_cond, op1, op2, rd); break;    // AND
+                                case 0x1: armEor(set_cond, op1, op2, rd); break;    // EOR
+                                case 0x2: armSub(set_cond, op1, op2, rd); break;    // SUB
+                                case 0x3: armRsb(set_cond, op1, op2, rd); break;    // RSB
+                                case 0x4: armAdd(set_cond, op1, op2, rd); break;    // ADD
+                                case 0x5: armAdc(set_cond, op1, op2, rd); break;    // ADC
+                                case 0x6: armSbc(set_cond, op1, op2, rd); break;    // SBC
+                                case 0x7: armRsc(set_cond, op1, op2, rd); break;    // RSC
+                                case 0x8: 
+                                    if (set_cond) armTst(op1, op2); // TST; AND operation 
+                                    else armPsrTransfer(w);         // * See 4.6: PSR Transfer; "TEQ, TST, CMN, CMP instructions without S flag set"
+                                    break;
+                                case 0x9: 
+                                    if (set_cond) armTeq(op1, op2); // TEQ; EOR operation
+                                    else armPsrTransfer(w);
+                                    break;
+                                case 0xa:
+                                    if (set_cond) armCmp(op1, op2); // CMP; SUB operation
+                                    else armPsrTransfer(w);
+                                    break;
+                                case 0xb: 
+                                    if (set_cond) armCmn(op1, op2); // CMN; ADD operation
+                                    else armPsrTransfer(w);
+                                    break;
+                                case 0xc: armOrr(set_cond, op1, op2, rd); break;    // ORR
+                                case 0xd: armMov(set_cond, op2, rd); break;         // MOV
+                                case 0xe: armBic(set_cond, op1, op2, rd); break;    // BIC
+                                case 0xf: armMvn(set_cond, op2, rd); break;         // MVN
+                                default: break;
+                            }
+                        }
 
                     }else if ((instr_code & 0x0c000000) == 0x04000000) {
                         // Single Data Transfer
                         if (debug) std::cout << "Single Data Transfer" << std::endl;
+
+                        // if (cond) {
+                        //     bool imm_offset = (w & 0x02000000) == 0x00000000; // true = imm, false = from reg
+                        //     bool pre_ind = (w & 0x01000000) == 0x01000000; // true = pre, false = post
+                        //     bool add_offset = (w & 0x00800000) == 0x00800000; // true = add offset, false = subtract offset
+                        //     bool word_transfer = (w & 0x00400000) == 0x00000000; // true = word transfer, false = byte transfer
+                        //     bool write_back = (w & 0x00200000) == 0x00200000; // true = write address into base, false = no write-back
+                        //     bool load = (w & 0x00100000) == 0x00100000; // true = load from memory, false = store to memory
+                        //     uint8_t rn = (w & 0x000f0000) >> 16; // base reg
+                        //     uint8_t rd = (w & 0x0000f000) >> 12; // source / dest reg
+                        //     uint32_t offset = 0;
+
+                        //     if (imm_offset) offset = w & 0x00000fff;
+                        //     else {
+                        //         offset = regRef(static_cast<uint8_t>(w & 0x0000000f));
+                        //         uint8_t shift = (w & 0x00000fe0) >> 4; // "fe" because shift amount cannot be reg-specified; bit 0 should always be 0
+                        //         shiftOp(false, shift, offset); // offset passed by ref
+                        //     }
+
+                        //     // * See 4.9.3: Bytes and words; ignore BIGEND signal because GBA is always little endian
+                        //     if (load) {
+                        //         if (word_transfer) armLdr(pre_ind, add_offset, write_back, rn, rd, offset);
+                        //         else armLdrb(pre_ind, add_offset, write_back, rn, rd, offset);
+                        //     }else {
+                        //         if (word_transfer) armStr();
+                        //         else armStrb();
+                        //     }
+                        // }
                     }
                 }
             }
@@ -432,94 +467,48 @@ uint32_t Gba::armDpOp2(uint32_t w) {
 
     if (imm == 0x00000000) { // Operand 2 is a reg
         // uint8_t rm = w & 0x0000000f;
-        uint8_t shift = (w & 0x00000ff0) >> 4;
-        uint8_t shift_t = (shift & 0x06) >> 1;
-        uint8_t shift_am = 0;
-        
-        if ((shift & 0x01) == 0x00) // Immediate value
-            shift_am = (shift & 0xf8) >> 3;
-        else // Value is from a reg
-            shift_am = static_cast<uint8_t>(regRef((shift & 0xf0) >> 4) & 0x000000ff);
-
         uint32_t op2 = regRef(static_cast<uint8_t>(w & 0x0000000f));
-
-        switch(shift_t) {
-            case 0x00: // Logical left
-                if (shift_am > 0) {
-                    op2 = op2 << (shift_am - 1); // Least significant shifted out bit needs to be saved in CPSR as the carry out
-                    if (set_cond) reg[CPSR] = (op2 & 0x80000000) == 0x00000000 ? reg[CPSR] & 0xdfffffff : reg[CPSR] | 0x20000000;
-                    op2 = op2 << 1;
-                } // Else, use op2 directly (LSL #0)
-                break;
-
-            case 0x01: // Logical right
-                if (shift_am == 0) { // LSR #0 becomes LSR #32; zero result and bit 31 becomes carry out
-                    if (set_cond) reg[CPSR] = (op2 & 0x80000000) == 0x00000000 ? reg[CPSR] & 0xdfffffff : reg[CPSR] | 0x20000000;
-                    op2 = 0;
-                }else {
-                    op2 = op2 >> (shift_am - 1); // Most significant shifted out bit needs to be saved in CPSR as the carry out
-                    if (set_cond) reg[CPSR] = (op2 & 0x00000001) == 0x00000000 ? reg[CPSR] & 0xdfffffff : reg[CPSR] | 0x20000000;
-                    op2 = op2 >> 1;
-                }
-
-                break;
-
-            case 0x02: { // Arithmetic right; logical right while keeping the signedness
-                    uint8_t sign = (op2 & 0x80000000) == 0x00000000 ? 0x00000000 : 0x80000000;
-
-                    if (shift_am == 0) { // ASR #0 becomes ASR #32; all 0s or 1s result and bit 31 becomes carry out
-                        if (set_cond) reg[CPSR] = sign == 0x00000000 ? reg[CPSR] & 0xdfffffff : reg[CPSR] | 0x20000000;
-                        op2 = sign == 0x00000000 ? 0x00000000 : 0xffffffff;
-                    }else {
-                        for(uint8_t i = 0; i < (shift_am - 1); ++i) // Most significant shifted out bit needs to be saved in CPSR as the carry out
-                            op2 = (op2 >> 1) | sign;
-
-                        if (set_cond) reg[CPSR] = (op2 & 0x00000001) == 0x00000000 ? reg[CPSR] & 0xdfffffff : reg[CPSR] | 0x20000000;
-                        op2 = (op2 >> 1) | sign;
-                    }
-                } // Brackets here to prevent cross initialization
-
-                break;
-
-            case 0x03: // Rotate right
-                if (shift_am == 0) { // ROR #0 becomes RRX (rotate right extended); bit 0 carried out, and CPSR's carry is carried into bit 31
-                    uint8_t lsb = op2 & 0x00000001;
-                    op2 = (op2 >> 1) | ((reg[CPSR] & 0x2000000) == 0x00000000 ? 0x00000000 : 0x80000000);
-                    if (set_cond) reg[CPSR] = lsb == 0x00 ? reg[CPSR] & 0xdfffffff : reg[CPSR] | 0x20000000;
-                }else {
-                    for(uint8_t i = 0; i < (shift_am - 1); ++i) { // Most significant shifted out bit needs to be saved in CPSR as the carry out
-                        uint8_t lsb = op2 & 0x00000001;
-                        op2 = (op2 >> 1) | (lsb == 0x00 ? 0x00000000 : 0x80000000);
-                    }
-
-                    uint8_t lsb = op2 & 0x00000001;
-                    if (set_cond) reg[CPSR] = lsb == 0x00 ? reg[CPSR] & 0xdfffffff : reg[CPSR] | 0x20000000;
-                    op2 = (op2 >> 1) | (lsb == 0x00 ? 0x00000000 : 0x80000000);
-                }
-
-                break;
-
-            default:
-                break;
-        }
-
+        uint8_t shift = (w & 0x00000ff0) >> 4;
+        shiftOp(set_cond, shift, op2); // op2 passed by ref
         return(op2);
     }else { // Operand 2 is an immediate value
-        uint8_t rotate = ((w & 0x00000f00) >> 7) % 32; // Shift word only 7 because rotate value is multiplied by 2 anyways; mod 32 since rotating by 32 will yield the same number
+        uint8_t rotate = (w & 0x00000f00) >> 7; // Shift word only 7 because rotate value is multiplied by 2 anyways
         uint32_t op2 = w & 0x000000ff;
-        
-        if (rotate > 0) {
-            for(uint8_t i = 0; i < rotate - 1; ++i) {
-                uint32_t lsb = op2 & 0x00000001;
-                op2 = (op2 >> 1) | (lsb == 0x00000000 ? 0x00000000 : 0x80000000);
-            }
+        armRor(set_cond, rotate, op2);  // Assuming this works the same as when operand 2 is register-specified
 
-            uint32_t lsb = op2 & 0x00000001;
-            reg[CPSR] = (lsb == 0x00000000 ? reg[CPSR] & 0xdfffffff : reg[CPSR] | 0x20000000);
-            op2 = (op2 >> 1) | (lsb == 0x00000000 ? 0x00000000 : 0x80000000);
-        }
+        // if (rotate > 0) {
+        //     for(uint8_t i = 0; i < rotate - 1; ++i) {
+        //         uint32_t lsb = op2 & 0x00000001;
+        //         op2 = (op2 >> 1) | (lsb == 0x00000000 ? 0x00000000 : 0x80000000);
+        //     }
+
+        //     uint32_t lsb = op2 & 0x00000001;
+        //     if (set_cond) reg[CPSR] = (lsb == 0x00000000 ? reg[CPSR] & 0xdfffffff : reg[CPSR] | 0x20000000);
+        //     op2 = (op2 >> 1) | (lsb == 0x00000000 ? 0x00000000 : 0x80000000);
+        // }
 
         return(op2);
+    }
+};
+
+void Gba::shiftOp(bool set_cond, uint8_t shift, uint32_t& op) {
+    uint8_t shift_t = (shift & 0x06) >> 1;
+    uint8_t shift_am = 0;
+    bool instr_spec = (shift & 0x01) == 0x00; // "instruction specified" shift amount
+    
+    if (instr_spec) // Immediate value
+        shift_am = (shift & 0xf8) >> 3;
+    else // Value is from a reg
+        shift_am = static_cast<uint8_t>(regRef((shift & 0xf0) >> 4) & 0x000000ff);
+
+    if (instr_spec || (shift_am > 0 && !instr_spec)) { // No special operations (e.g. ASR #0, LSR #0) if shift_am == 0 AND shift_am is reg-specified
+        switch(shift_t) { // op passed by reference
+            case 0x00: armLsl(set_cond, shift_am, op); break; // LSL, logical shift left
+            case 0x01: armLsr(set_cond, shift_am, op); break; // LSR, logical shift right
+            case 0x02: armAsr(set_cond, shift_am, op); break; // ASR, arithmetic shift right; shift right while keeping signedness
+            case 0x03: armRor(set_cond, shift_am, op); break; // ROR, rotate right
+            default: break;
+        }
     }
 };
 
@@ -561,6 +550,30 @@ void Gba::armAriSetCond(uint32_t res, bool c_flag, bool v_flag, uint8_t rd) {
             default: break;
         }
     }
+};
+
+void Gba::armPsrTransfer(uint32_t w) {
+    uint8_t psr_num = CPSR;
+    if ((w & 0x00400000) == 0x00400000) {
+        uint8_t op_mode = static_cast<uint8_t>(reg[CPSR] & 0x0000001f);
+
+        switch(op_mode) {
+            case FIQ: psr_num = SPSR_fiq; break;
+            case IRQ: psr_num = SPSR_irq; break;
+            case SVC: psr_num = SPSR_svc; break;
+            case ABT: psr_num = SPSR_abt; break;
+            case UND: psr_num = SPSR_und; break;
+            default: break;
+        }
+    }
+
+    // * See Figure 4-11: PSR Transfer; bit 21 for distinguishing between MRS and MSR
+
+    if ((w & 0x00200000) == 0x00000000) // MRS
+        armMrs(psr_num, static_cast<uint8_t>((w & 0x0000f000) >> 12));
+    else
+        armMsr(psr_num, w);
+
 };
 
 // -- END Helper Functions

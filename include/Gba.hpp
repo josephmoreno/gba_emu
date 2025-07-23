@@ -16,19 +16,19 @@ struct Gba {
 
     // Internal memory
     static constexpr uint32_t sys_rom_offset = 0;
-    static constexpr uint32_t sys_rom_size = 16383;
+    static constexpr uint32_t sys_rom_size = 16384;
     static constexpr uint32_t ob_wram_offset = 0x02000000;
-    static constexpr uint32_t ob_wram_size = 262143;
+    static constexpr uint32_t ob_wram_size = 262144;
     static constexpr uint32_t oc_wram_offset = 0x03000000;
-    static constexpr uint32_t oc_wram_size = 32767;
+    static constexpr uint32_t oc_wram_size = 32768;
     static constexpr uint32_t io_ram_offset = 0x04000000;
-    static constexpr uint32_t io_ram_size = 1022;
+    static constexpr uint32_t io_ram_size = 1023;
     static constexpr uint32_t palette_ram_offset = 0x05000000;
-    static constexpr uint32_t palette_ram_size = 1023;
+    static constexpr uint32_t palette_ram_size = 1024;
     static constexpr uint32_t vram_offset = 0x06000000;
-    static constexpr uint32_t vram_size = 98303;
+    static constexpr uint32_t vram_size = 98304;
     static constexpr uint32_t oam_offset = 0x07000000;
-    static constexpr uint32_t oam_size = 1023;
+    static constexpr uint32_t oam_size = 1024;
 
     static uint8_t sys_rom[];       // 0x0000_0000 - 0x0000_3fff, 16kB
     static uint8_t ob_wram[];       // 0x0200_0000 - 0x0203_ffff, 256kB, "on-board work RAM"
@@ -44,7 +44,7 @@ struct Gba {
     static constexpr uint32_t pak_rom2_offset = 0x0c000000;
     static uint32_t pak_size;
     static constexpr uint32_t pak_sram_offset = 0x0e000000;
-    static constexpr uint32_t pak_sram_size = 65535;
+    static constexpr uint32_t pak_sram_size = 65536;
 
     static uint8_t* pak_rom[];  // 0x0800_0000 - 0x09ff_ffff, 0x0a00_0000 - 0x0bff_ffff, 0x0c00_0000 - 0x0dff_ffff, 32MB each, game pak ROM; going to dynamically allocate because of large max size and pak size varies
     static uint8_t pak_sram[];  // 0x0e00_0000 - 0x0e00_ffff, 64kB, for saved data
@@ -93,13 +93,16 @@ struct Gba {
     static uint32_t& regRef(uint8_t reg_num);
     static uint8_t& memRef(uint32_t addr);
     static uint32_t armDpOp2(uint32_t w);
+    static void shiftOp(bool set_cond, uint8_t shift, uint32_t& op);
     static void armLogSetCond(uint32_t res, uint8_t rd);
     static void armAriSetCond(uint32_t res, bool c_flag, bool v_flag, uint8_t rd);
+    static void armPsrTransfer(uint32_t w);
 
     // ARM Instructions
     static void armAdc(bool set_cond, uint32_t op1, uint32_t op2, uint8_t rd);
     static void armAdd(bool set_cond, uint32_t op1, uint32_t op2, uint8_t rd);
     static void armAnd(bool set_cond, uint32_t op1, uint32_t op2, uint8_t rd);
+    static void armAsr(bool set_cond, uint8_t shift_am, uint32_t& op);
     static void armB(uint32_t offset);
     static void armBic(bool set_cond, uint32_t op1, uint32_t op2, uint8_t rd);
     static void armBl(uint32_t offset);
@@ -107,14 +110,25 @@ struct Gba {
     static void armCmn(uint32_t op1, uint32_t op2);
     static void armCmp(uint32_t op1, uint32_t op2);
     static void armEor(bool set_cond, uint32_t op1, uint32_t op2, uint8_t rd);
+    static void armLdr(bool pre_ind, bool add_offset, bool write_back, uint8_t rn, uint8_t rd, uint32_t offset);
+    static void armLdrb(bool pre_ind, bool add_offset, bool write_back, uint8_t rn, uint8_t rd, uint32_t offset);
+    static void armLsl(bool set_cond, uint8_t shift_am, uint32_t& op);
+    static void armLsr(bool set_cond, uint8_t shift_am, uint32_t& op);
     static void armMla(bool set_cond, uint32_t op1, uint32_t op2, uint32_t acc, uint8_t rd);
+    static void armMlal(bool set_cond, bool sign, uint32_t op1, uint32_t op2, uint8_t rd_h, uint8_t rd_l);
     static void armMov(bool set_cond, uint32_t op2, uint8_t rd);
     static void armMul(bool set_cond, uint32_t op1, uint32_t op2, uint32_t& acc, uint8_t rd);
+    static void armMull(bool set_cond, bool sign, uint32_t op1, uint32_t op2, uint8_t rd_h, uint8_t rd_l);
+    static void armMrs(uint8_t psr_num, uint8_t rd);
+    static void armMsr(uint8_t psr_num, uint32_t w);
     static void armMvn(bool set_cond, uint32_t op2, uint8_t rd);
     static void armOrr(bool set_cond, uint32_t op1, uint32_t op2, uint8_t rd);
+    static void armRor(bool set_cond, uint8_t shift_am, uint32_t& op);
     static void armRsb(bool set_cond, uint32_t op1, uint32_t op2, uint8_t rd);
     static void armRsc(bool set_cond, uint32_t op1, uint32_t op2, uint8_t rd);
     static void armSbc(bool set_cond, uint32_t op1, uint32_t op2, uint8_t rd);
+    static void armStr();
+    static void armStrb();
     static void armSub(bool set_cond, uint32_t op1, uint32_t op2, uint8_t rd);
     static void armTeq(uint32_t op1, uint32_t op2);
     static void armTst(uint32_t op1, uint32_t op2);
