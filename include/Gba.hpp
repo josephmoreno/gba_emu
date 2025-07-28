@@ -97,6 +97,11 @@ struct Gba {
     static void armLogSetCond(uint32_t res, uint8_t rd);
     static void armAriSetCond(uint32_t res, bool c_flag, bool v_flag, uint8_t rd);
     static void armPsrTransfer(uint32_t w);
+    static bool nFlag();
+    static bool zFlag();
+    static bool cFlag();
+    static bool vFlag();
+    static bool isArm(); // true = ARM, false = THUMB
 
     // ARM Instructions
     static void armAdc(bool set_cond, uint32_t op1, uint32_t op2, uint8_t rd);

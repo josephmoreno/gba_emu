@@ -1,9 +1,9 @@
 #include "../include/Gba.hpp"
 
 void Gba::armAdc(bool set_cond, uint32_t op1, uint32_t op2, uint8_t rd) {
-    op2 = op2 + ((reg[CPSR] & 0x20000000) == 0x20000000 ? 1 : 0);
-    uint64_t res_e = op1 + op2;
-    bool c_flag = (res_e >= 0x100000000);
+    op2 = op2 + (cFlag() ? 1 : 0);
+    uint64_t res_e = static_cast<uint64_t>(op1) + static_cast<uint64_t>(op2);
+    bool c_flag = ((res_e & 0x0000000100000000) == 0x100000000);
     bool v_flag = false;
     uint32_t res = res_e;
 
@@ -15,8 +15,8 @@ void Gba::armAdc(bool set_cond, uint32_t op1, uint32_t op2, uint8_t rd) {
 };
 
 void Gba::armAdd(bool set_cond, uint32_t op1, uint32_t op2, uint8_t rd) {
-    uint64_t res_e = op1 + op2;
-    bool c_flag = (res_e >= 0x100000000);
+    uint64_t res_e = static_cast<uint64_t>(op1) + static_cast<uint64_t>(op2);
+    bool c_flag = ((res_e & 0x0000000100000000) == 0x100000000);
     bool v_flag = false;
     uint32_t res = res_e;
 
@@ -34,11 +34,11 @@ void Gba::armAnd(bool set_cond, uint32_t op1, uint32_t op2, uint8_t rd) {
 };
 
 void Gba::armAsr(bool set_cond, uint8_t shift_am, uint32_t& op) {
-    uint8_t sign = (op & 0x80000000) == 0x00000000 ? 0x00000000 : 0x80000000;
+    uint32_t sign = (op & 0x80000000) == 0x00000000 ? 0x00000000 : 0x80000000;
 
     if (shift_am == 0) { // ASR #0 becomes ASR #32; all 0s or 1s result and bit 31 becomes carry out
-        if (set_cond) reg[CPSR] = sign == 0x00000000 ? reg[CPSR] & 0xdfffffff : reg[CPSR] | 0x20000000;
-        op = sign == 0x00000000 ? 0x00000000 : 0xffffffff;
+        if (set_cond) reg[CPSR] = (sign == 0x00000000 ? reg[CPSR] & 0xdfffffff : reg[CPSR] | 0x20000000);
+        op = (sign == 0x00000000 ? 0x00000000 : 0xffffffff);
     }else {
         for(uint8_t i = 0; i < (shift_am - 1); ++i) // Most significant shifted out bit needs to be saved in CPSR as the carry out
             op = (op >> 1) | sign;
@@ -68,8 +68,8 @@ void Gba::armBx(uint8_t rn) {
 };
 
 void Gba::armCmn(uint32_t op1, uint32_t op2) {
-    uint64_t res_e = op1 + op2;
-    bool c_flag = (res_e >= 0x100000000);
+    uint64_t res_e = static_cast<uint64_t>(op1) + static_cast<uint64_t>(op2);
+    bool c_flag = ((res_e & 0x0000000100000000) == 0x100000000);
     bool v_flag = false;
     uint32_t res = res_e;
 
@@ -96,40 +96,40 @@ void Gba::armEor(bool set_cond, uint32_t op1, uint32_t op2, uint8_t rd) {
     if (set_cond) armLogSetCond(res, rd);
 };
 
-void Gba::armLdr(bool pre_ind, bool add_offset, bool write_back, uint8_t rn, uint8_t rd, uint32_t offset) {
-    uint32_t base = regRef(rn);
-    uint32_t res_addr = base;
+// void Gba::armLdr(bool pre_ind, bool add_offset, bool write_back, uint8_t rn, uint8_t rd, uint32_t offset) {
+//     uint32_t base = regRef(rn);
+//     uint32_t res_addr = base;
 
-    if (add_offset)
-        res_addr += offset;
-    else // Subtract the offset
-        res_addr -= offset;
+//     if (add_offset)
+//         res_addr += offset;
+//     else // Subtract the offset
+//         res_addr -= offset;
 
-    if (pre_ind) { // Add offset before transfer (use res_addr)
-        uint32_t w = 
-            static_cast<uint32_t>(memRef(res_addr + 3) << 24) |
-            static_cast<uint32_t>(memRef(res_addr + 2) << 16) |
-            static_cast<uint32_t>(memRef(res_addr + 1) << 8) |
-            static_cast<uint32_t>(memRef(res_addr));
+//     if (pre_ind) { // Add offset before transfer (use res_addr)
+//         uint32_t w = 
+//             static_cast<uint32_t>(memRef(res_addr + 3) << 24) |
+//             static_cast<uint32_t>(memRef(res_addr + 2) << 16) |
+//             static_cast<uint32_t>(memRef(res_addr + 1) << 8) |
+//             static_cast<uint32_t>(memRef(res_addr));
 
-        regRef(rd) = w;
-    }else { // Add offset after transfer (use base)
-        uint32_t w = 
-            static_cast<uint32_t>(memRef(base + 3) << 24) |
-            static_cast<uint32_t>(memRef(base + 2) << 16) |
-            static_cast<uint32_t>(memRef(base + 1) << 8) |
-            static_cast<uint32_t>(memRef(base));
+//         regRef(rd) = w;
+//     }else { // Add offset after transfer (use base)
+//         uint32_t w = 
+//             static_cast<uint32_t>(memRef(base + 3) << 24) |
+//             static_cast<uint32_t>(memRef(base + 2) << 16) |
+//             static_cast<uint32_t>(memRef(base + 1) << 8) |
+//             static_cast<uint32_t>(memRef(base));
 
-        regRef(rd) = w;
-    }
+//         regRef(rd) = w;
+//     }
 
-    if (write_back)
-        regRef(rn) = res_addr;
-};
+//     if (write_back)
+//         regRef(rn) = res_addr;
+// };
 
-void Gba::armLdrb(bool pre_ind, bool add_offset, bool write_back, uint8_t rn, uint8_t rd, uint32_t offset) {
+// void Gba::armLdrb(bool pre_ind, bool add_offset, bool write_back, uint8_t rn, uint8_t rd, uint32_t offset) {
 
-};
+// };
 
 void Gba::armLsl(bool set_cond, uint8_t shift_am, uint32_t& op) {
     if (shift_am > 0) {
@@ -141,11 +141,11 @@ void Gba::armLsl(bool set_cond, uint8_t shift_am, uint32_t& op) {
 
 void Gba::armLsr(bool set_cond, uint8_t shift_am, uint32_t& op) {
     if (shift_am == 0) { // LSR #0 becomes LSR #32; zero result and bit 31 becomes carry out
-        if (set_cond) reg[CPSR] = (op & 0x80000000) == 0x00000000 ? reg[CPSR] & 0xdfffffff : reg[CPSR] | 0x20000000;
+        if (set_cond) reg[CPSR] = ((op & 0x80000000) == 0x00000000 ? reg[CPSR] & 0xdfffffff : reg[CPSR] | 0x20000000);
         op = 0;
     }else {
         op = op >> (shift_am - 1); // Most significant shifted out bit needs to be saved in CPSR as the carry out
-        if (set_cond) reg[CPSR] = (op & 0x00000001) == 0x00000000 ? reg[CPSR] & 0xdfffffff : reg[CPSR] | 0x20000000;
+        if (set_cond) reg[CPSR] = ((op & 0x00000001) == 0x00000000 ? reg[CPSR] & 0xdfffffff : reg[CPSR] | 0x20000000);
         op = op >> 1;
     }
 };
@@ -155,31 +155,55 @@ void Gba::armMla(bool set_cond, uint32_t op1, uint32_t op2, uint32_t acc, uint8_
     regRef(rd) = res;
 
     if (set_cond) { // N and Z flags affected
-        if (res == 0) reg[CPSR] = (reg[CPSR] & 0x7fffffff) | 0x40000000; // Un-set N, set Z
-        else if ((res & 0x80000000) == 0x80000000) reg[CPSR] = (reg[CPSR] & 0xbfffffff) | 0x80000000; // Un-set Z, set N
+        if (res == 0)
+            reg[CPSR] = reg[CPSR] | 0x40000000; // Set Z
+        else
+            reg[CPSR] = reg[CPSR] & 0xbfffffff; // Un-set Z
+
+        if ((res & 0x80000000) == 0x80000000)
+            reg[CPSR] = reg[CPSR] | 0x80000000; // Set N
+        else
+            reg[CPSR] = reg[CPSR] & 0x7fffffff; // Un-set N
     }
 };
 
 void Gba::armMlal(bool set_cond, bool sign, uint32_t op1, uint32_t op2, uint8_t rd_h, uint8_t rd_l) {
     if (sign) {
+        int64_t op1_e = static_cast<int64_t>(static_cast<int32_t>(op1));
+        int64_t op2_e = static_cast<int64_t>(static_cast<int32_t>(op2));
+
         int64_t acc = (static_cast<int64_t>(regRef(rd_h)) << 32) | static_cast<int64_t>(regRef(rd_l));
-        int64_t res = static_cast<int64_t>(op1) * static_cast<int64_t>(op2) + acc;
+        int64_t res = op1_e * op2_e + acc;
         regRef(rd_h) = static_cast<int32_t>(res >> 32);
         regRef(rd_l) = static_cast<int32_t>(res);
 
         if (set_cond) { // Only N and Z flags are affected
-            if (res == 0) reg[CPSR] = (reg[CPSR] & 0x7fffffff) | 0x40000000; // Un-set N, set Z
-            else if ((res & 0x8000000000000000) == 0x8000000000000000) reg[CPSR] = (reg[CPSR] & 0xbfffffff) | 0x80000000; // Un-set Z, set N
+            if (res == 0)
+                reg[CPSR] = reg[CPSR] | 0x40000000; // Set Z
+            else
+                reg[CPSR] = reg[CPSR] & 0xbfffffff; // Un-set Z
+            
+            if ((res & 0x8000000000000000) == 0x8000000000000000)
+                reg[CPSR] = reg[CPSR] | 0x80000000; // Set N
+            else
+                reg[CPSR] = reg[CPSR] & 0x7fffffff; // Un-set N
         }
     }else {
         uint64_t acc = (static_cast<uint64_t>(regRef(rd_h)) << 32) | static_cast<uint64_t>(regRef(rd_l));
-        uint64_t res = op1 * op2 + acc;
+        uint64_t res = static_cast<uint64_t>(op1) * static_cast<uint64_t>(op2) + acc;
         regRef(rd_h) = static_cast<uint32_t>(res >> 32);
         regRef(rd_l) = static_cast<uint32_t>(res);
 
         if (set_cond) { // Only N and Z flags are affected
-            if (res == 0) reg[CPSR] = (reg[CPSR] & 0x7fffffff) | 0x40000000; // Un-set N, set Z
-            else if ((res & 0x8000000000000000) == 0x8000000000000000) reg[CPSR] = (reg[CPSR] & 0xbfffffff) | 0x80000000; // Un-set Z, set N
+            if (res == 0)
+                reg[CPSR] = reg[CPSR] | 0x40000000; // Set Z
+            else
+                reg[CPSR] = reg[CPSR] & 0xbfffffff; // Un-set Z
+            
+            if ((res & 0x8000000000000000) == 0x8000000000000000)
+                reg[CPSR] = reg[CPSR] | 0x80000000; // Set N
+            else
+                reg[CPSR] = reg[CPSR] & 0x7fffffff; // Un-set N
         }
     }
 };
@@ -195,29 +219,53 @@ void Gba::armMul(bool set_cond, uint32_t op1, uint32_t op2, uint32_t& acc, uint8
     regRef(rd) = res;
 
     if (set_cond) { // Only N and Z flags are affected
-        if (res == 0) reg[CPSR] = (reg[CPSR] & 0x7fffffff) | 0x40000000; // Un-set N, set Z
-        else if ((res & 0x80000000) == 0x80000000) reg[CPSR] = (reg[CPSR] & 0xbfffffff) | 0x80000000; // Un-set Z, set N
+        if (res == 0) 
+            reg[CPSR] = reg[CPSR] | 0x40000000; // Set Z
+        else
+            reg[CPSR] = reg[CPSR] & 0xbfffffff; // Un-set Z
+        
+        if ((res & 0x80000000) == 0x80000000)
+            reg[CPSR] = reg[CPSR] | 0x80000000; // Set N
+        else
+            reg[CPSR] = reg[CPSR] & 0x7fffffff; // Un-set N
     }
 };
 
 void Gba::armMull(bool set_cond, bool sign, uint32_t op1, uint32_t op2, uint8_t rd_h, uint8_t rd_l) {
     if (sign) {
-        int64_t res = static_cast<int64_t>(op1) * static_cast<int64_t>(op2);
+        int64_t op1_e = static_cast<int64_t>(static_cast<int32_t>(op1));
+        int64_t op2_e = static_cast<int64_t>(static_cast<int32_t>(op2));
+
+        int64_t res = op1_e * op2_e;
         regRef(rd_h) = static_cast<int32_t>(res >> 32);
         regRef(rd_l) = static_cast<int32_t>(res);
 
         if (set_cond) { // Only N and Z flags are affected
-            if (res == 0) reg[CPSR] = (reg[CPSR] & 0x7fffffff) | 0x40000000; // Un-set N, set Z
-            else if ((res & 0x8000000000000000) == 0x8000000000000000) reg[CPSR] = (reg[CPSR] & 0xbfffffff) | 0x80000000; // Un-set Z, set N
+            if (res == 0)
+                reg[CPSR] = reg[CPSR] | 0x40000000; // Set Z
+            else
+                reg[CPSR] = reg[CPSR] & 0xbfffffff; // Un-set Z
+            
+            if ((res & 0x8000000000000000) == 0x8000000000000000)
+                reg[CPSR] = reg[CPSR] | 0x80000000; // Set N
+            else
+                reg[CPSR] = reg[CPSR] & 0x7fffffff; // Un-set N
         }
     }else {
-        uint64_t res = op1 * op2;
+        uint64_t res = static_cast<uint64_t>(op1) * static_cast<uint64_t>(op2);
         regRef(rd_h) = static_cast<uint32_t>(res >> 32);
         regRef(rd_l) = static_cast<uint32_t>(res);
 
         if (set_cond) { // Only N and Z flags are affected
-            if (res == 0) reg[CPSR] = (reg[CPSR] & 0x7fffffff) | 0x40000000; // Un-set N, set Z
-            else if ((res & 0x8000000000000000) == 0x8000000000000000) reg[CPSR] = (reg[CPSR] & 0xbfffffff) | 0x80000000; // Un-set Z, set N
+            if (res == 0)
+                reg[CPSR] = reg[CPSR] | 0x40000000; // Set Z
+            else
+                reg[CPSR] = reg[CPSR] & 0xbfffffff; // Un-set Z
+            
+            if ((res & 0x8000000000000000) == 0x8000000000000000)
+                reg[CPSR] = reg[CPSR] | 0x80000000; // Set N
+            else
+                reg[CPSR] = reg[CPSR] & 0x7fffffff; // Un-set N
         }
     }
 };
