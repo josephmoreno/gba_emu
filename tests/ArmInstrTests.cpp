@@ -207,7 +207,7 @@ TEST_CASE("ARM Instructions", "[ARM, processor, instruction set]") {
     SECTION("AND, set_cond = true") {
         set_cond = true;
 
-        // set_cond = false, no flags set
+        // no flags set
         gba.armAnd(set_cond, 0xffffffff, 0x55555555, 0);
         REQUIRE(Gba::regRef(Gba::R0) == 0x55555555);
         REQUIRE(!Gba::nFlag());
@@ -215,7 +215,7 @@ TEST_CASE("ARM Instructions", "[ARM, processor, instruction set]") {
         REQUIRE(!Gba::cFlag());
         REQUIRE(!Gba::vFlag());
 
-        // set_cond = false, set Z
+        // set Z
         gba.armAnd(set_cond, 0xffffffff, 0, 1);
         REQUIRE(Gba::regRef(Gba::R1) == 0);
         REQUIRE(!Gba::nFlag());
@@ -223,7 +223,7 @@ TEST_CASE("ARM Instructions", "[ARM, processor, instruction set]") {
         REQUIRE(!Gba::cFlag());
         REQUIRE(!Gba::vFlag());
 
-        // set_cond = false, set N
+        // set N
         gba.armAnd(set_cond, 0xffffffff, 0xaaaaaaaa, 2);
         REQUIRE(Gba::regRef(Gba::R2) == 0xaaaaaaaa);
         REQUIRE(Gba::nFlag());
@@ -294,7 +294,7 @@ TEST_CASE("ARM Instructions", "[ARM, processor, instruction set]") {
         set_cond = true;
         uint32_t op;
 
-        // set_cond = false, ASR #0
+        // ASR #0, no flags set
         op = 0x7fffffff;
         gba.armAsr(set_cond, 0, op);
         REQUIRE(op == 0);
@@ -303,7 +303,7 @@ TEST_CASE("ARM Instructions", "[ARM, processor, instruction set]") {
         REQUIRE(!Gba::cFlag());
         REQUIRE(!Gba::vFlag());
 
-        // set_cond = false, ASR #0, set C
+        // ASR #0, set C
         op = 0x80000000;
         gba.armAsr(set_cond, 0, op);
         REQUIRE(op == 0xffffffff);
@@ -312,7 +312,7 @@ TEST_CASE("ARM Instructions", "[ARM, processor, instruction set]") {
         REQUIRE(Gba::cFlag());
         REQUIRE(!Gba::vFlag());
 
-        // set_cond = false, ASR #30
+        // ASR #30, no flags set
         op = 0x40000000;
         gba.armAsr(set_cond, 30, op);
         REQUIRE(op == 1);
@@ -321,7 +321,7 @@ TEST_CASE("ARM Instructions", "[ARM, processor, instruction set]") {
         REQUIRE(!Gba::cFlag());
         REQUIRE(!Gba::vFlag());
 
-        // set_cond = false, ASR #31, set C
+        // ASR #31, set C
         op = 0x40000000;
         gba.armAsr(set_cond, 31, op);
         REQUIRE(op == 0);
@@ -330,7 +330,7 @@ TEST_CASE("ARM Instructions", "[ARM, processor, instruction set]") {
         REQUIRE(Gba::cFlag());
         REQUIRE(!Gba::vFlag());
 
-        // set_cond = false, ASR #30, set C
+        // ASR #30, set C
         op = 0xbfffffff;
         gba.armAsr(set_cond, 30, op);
         REQUIRE(op == 0xfffffffe);
@@ -339,7 +339,7 @@ TEST_CASE("ARM Instructions", "[ARM, processor, instruction set]") {
         REQUIRE(Gba::cFlag());
         REQUIRE(!Gba::vFlag());
 
-        // set_cond = false, ASR #31
+        // ASR #31, no flags set
         op = 0xbfffffff;
         gba.armAsr(set_cond, 31, op);
         REQUIRE(op == 0xffffffff);
@@ -626,7 +626,7 @@ TEST_CASE("ARM Instructions", "[ARM, processor, instruction set]") {
         set_cond = true;
         uint32_t op;
 
-        // set_cond = false, no flags set
+        // no flags set
         op = 1;
         gba.armLsl(set_cond, 0, op);
         REQUIRE(op == 1);
@@ -635,7 +635,7 @@ TEST_CASE("ARM Instructions", "[ARM, processor, instruction set]") {
         REQUIRE(!Gba::cFlag());
         REQUIRE(!Gba::vFlag());
 
-        // set_cond = false, no flags set
+        // no flags set
         op = 1;
         gba.armLsl(set_cond, 1, op);
         REQUIRE(op == 2);
@@ -644,7 +644,7 @@ TEST_CASE("ARM Instructions", "[ARM, processor, instruction set]") {
         REQUIRE(!Gba::cFlag());
         REQUIRE(!Gba::vFlag());
 
-        // set_cond = false, set C
+        // set C
         op = 0x80000000;
         gba.armLsl(set_cond, 1, op);
         REQUIRE(op == 0);
@@ -653,7 +653,7 @@ TEST_CASE("ARM Instructions", "[ARM, processor, instruction set]") {
         REQUIRE(Gba::cFlag());
         REQUIRE(!Gba::vFlag());
 
-        // set_cond = false, retain C
+        // retain C
         op = 0x80000000;
         gba.armLsl(set_cond, 0, op);
         REQUIRE(op == 0x80000000);
@@ -791,7 +791,7 @@ TEST_CASE("ARM Instructions", "[ARM, processor, instruction set]") {
     SECTION("MLA, set_cond = true") {
         set_cond = true;
 
-        // set_cond = false, no flags set
+        // no flags set
         gba.armMla(set_cond, 1, 1, 0, 0);
         REQUIRE(Gba::reg[Gba::R0] == 1);
         REQUIRE(!Gba::nFlag());
@@ -799,7 +799,7 @@ TEST_CASE("ARM Instructions", "[ARM, processor, instruction set]") {
         REQUIRE(!Gba::cFlag());
         REQUIRE(!Gba::vFlag());
 
-        // set_cond = false, set N
+        // set N
         gba.armMla(set_cond, 0x80000000, 1, 0, 1);
         REQUIRE(Gba::reg[Gba::R1] == 0x80000000);
         REQUIRE(Gba::nFlag());
@@ -807,7 +807,7 @@ TEST_CASE("ARM Instructions", "[ARM, processor, instruction set]") {
         REQUIRE(!Gba::cFlag());
         REQUIRE(!Gba::vFlag());
 
-        // set_cond = false, set Z
+        // set Z
         gba.armMla(set_cond, 0xffffffff, 1, 1, 2);
         REQUIRE(Gba::reg[Gba::R2] == 0);
         REQUIRE(!Gba::nFlag());
@@ -925,7 +925,7 @@ TEST_CASE("ARM Instructions", "[ARM, processor, instruction set]") {
     SECTION("MOV, set_cond = true") {
         set_cond = true;
 
-        // set_cond = false, no flags set
+        // no flags set
         gba.armMov(set_cond, 0x0fffffff, 0);
         REQUIRE(Gba::reg[Gba::R0] == 0x0fffffff);
         REQUIRE(!Gba::nFlag());
@@ -933,7 +933,7 @@ TEST_CASE("ARM Instructions", "[ARM, processor, instruction set]") {
         REQUIRE(!Gba::cFlag());
         REQUIRE(!Gba::vFlag());
 
-        // set_cond = false, set N
+        // set N
         gba.armMov(set_cond, 0x80000000, 1);
         REQUIRE(Gba::reg[Gba::R1] == 0x80000000);
         REQUIRE(Gba::nFlag());
@@ -941,7 +941,7 @@ TEST_CASE("ARM Instructions", "[ARM, processor, instruction set]") {
         REQUIRE(!Gba::cFlag());
         REQUIRE(!Gba::vFlag());
 
-        // set_cond = false, set Z
+        // set Z
         gba.armMov(set_cond, 0, 2);
         REQUIRE(Gba::reg[Gba::R2] == 0);
         REQUIRE(!Gba::nFlag());
@@ -1103,5 +1103,537 @@ TEST_CASE("ARM Instructions", "[ARM, processor, instruction set]") {
 
         gba.armMrs(Gba::SPSR_fiq, 0);
         REQUIRE(Gba::reg[Gba::R0] == 0);
+    }
+
+    SECTION("MSR") {
+        // Reg to PSR flags only
+        Gba::regRef(0) = 0xafffffff;
+        gba.armMsr(Gba::CPSR, 0x00000000);
+        REQUIRE((Gba::reg[Gba::CPSR] & 0xf00000ff) == 0xa0000013);
+        REQUIRE(Gba::nFlag());
+        REQUIRE(!Gba::zFlag());
+        REQUIRE(Gba::cFlag());
+        REQUIRE(!Gba::vFlag());
+
+        // Rotated imm to PSR flags only
+        gba.armMsr(Gba::CPSR, 0x02000207);
+        REQUIRE((Gba::reg[Gba::CPSR] & 0xf00000ff) == 0xc0000013);
+        REQUIRE(Gba::nFlag());
+        REQUIRE(Gba::zFlag());
+        REQUIRE(!Gba::cFlag());
+        REQUIRE(!Gba::vFlag());
+
+        // Rotated imm to PSR flags only
+        gba.armMsr(Gba::CPSR, 0x02000107);
+        REQUIRE((Gba::reg[Gba::CPSR] & 0xf00000ff) == 0x80000013);
+        REQUIRE(Gba::nFlag());
+        REQUIRE(!Gba::zFlag());
+        REQUIRE(!Gba::cFlag());
+        REQUIRE(!Gba::vFlag());
+
+        // Reg to PSR
+        Gba::regRef(1) = 0x9fffff30;
+        gba.armMsr(Gba::CPSR, 0x00010001);
+        REQUIRE((Gba::reg[Gba::CPSR] & 0xf00000ff) == 0x90000030);
+        REQUIRE(!Gba::isArm());
+        REQUIRE(Gba::nFlag());
+        REQUIRE(!Gba::zFlag());
+        REQUIRE(!Gba::cFlag());
+        REQUIRE(Gba::vFlag());
+
+        // Reg to PSR
+        Gba::regRef(2) = 0x6fffff13;
+        gba.armMsr(Gba::CPSR, 0x00010002);
+        REQUIRE((Gba::reg[Gba::CPSR] & 0xf00000ff) == 0x60000013);
+        REQUIRE(Gba::isArm());
+        REQUIRE(!Gba::nFlag());
+        REQUIRE(Gba::zFlag());
+        REQUIRE(Gba::cFlag());
+        REQUIRE(!Gba::vFlag());
+    }
+
+    SECTION("MVN, set_cond = false") {
+        // set_cond = false, no flags set
+        gba.armMvn(set_cond, 0xfffffffe, 0);
+        REQUIRE(Gba::reg[Gba::R0] == 1);
+        REQUIRE(!Gba::nFlag());
+        REQUIRE(!Gba::zFlag());
+        REQUIRE(!Gba::cFlag());
+        REQUIRE(!Gba::vFlag());
+
+        // set_cond = false, set N
+        gba.armMvn(set_cond, 1, 1);
+        REQUIRE(Gba::reg[Gba::R1] == 0xfffffffe);
+        REQUIRE(!Gba::nFlag());
+        REQUIRE(!Gba::zFlag());
+        REQUIRE(!Gba::cFlag());
+        REQUIRE(!Gba::vFlag());
+
+        // set_cond = false, set Z
+        gba.armMvn(set_cond, 0xffffffff, 2);
+        REQUIRE(Gba::reg[Gba::R2] == 0);
+        REQUIRE(!Gba::nFlag());
+        REQUIRE(!Gba::zFlag());
+        REQUIRE(!Gba::cFlag());
+        REQUIRE(!Gba::vFlag());
+    }
+
+    SECTION("MVN, set_cond = true") {
+        set_cond = true;
+
+        // no flags set
+        gba.armMvn(set_cond, 0xfffffffe, 0);
+        REQUIRE(Gba::reg[Gba::R0] == 1);
+        REQUIRE(!Gba::nFlag());
+        REQUIRE(!Gba::zFlag());
+        REQUIRE(!Gba::cFlag());
+        REQUIRE(!Gba::vFlag());
+
+        // set N
+        gba.armMvn(set_cond, 1, 1);
+        REQUIRE(Gba::reg[Gba::R1] == 0xfffffffe);
+        REQUIRE(Gba::nFlag());
+        REQUIRE(!Gba::zFlag());
+        REQUIRE(!Gba::cFlag());
+        REQUIRE(!Gba::vFlag());
+
+        // set Z
+        gba.armMvn(set_cond, 0xffffffff, 2);
+        REQUIRE(Gba::reg[Gba::R2] == 0);
+        REQUIRE(!Gba::nFlag());
+        REQUIRE(Gba::zFlag());
+        REQUIRE(!Gba::cFlag());
+        REQUIRE(!Gba::vFlag());
+    }
+
+    SECTION("ORR, set_cond = false") {
+        // set_cond = false, no flags set
+        gba.armOrr(set_cond, 0, 1, 0);
+        REQUIRE(Gba::reg[Gba::R0] == 1);
+        REQUIRE(!Gba::nFlag());
+        REQUIRE(!Gba::zFlag());
+        REQUIRE(!Gba::cFlag());
+        REQUIRE(!Gba::vFlag());
+
+        // set_cond = false, set N
+        gba.armOrr(set_cond, 0x80000000, 1, 1);
+        REQUIRE(Gba::reg[Gba::R1] == 0x80000001);
+        REQUIRE(!Gba::nFlag());
+        REQUIRE(!Gba::zFlag());
+        REQUIRE(!Gba::cFlag());
+        REQUIRE(!Gba::vFlag());
+
+        // set_cond = false, set Z
+        gba.armOrr(set_cond, 0, 0, 2);
+        REQUIRE(Gba::reg[Gba::R2] == 0);
+        REQUIRE(!Gba::nFlag());
+        REQUIRE(!Gba::zFlag());
+        REQUIRE(!Gba::cFlag());
+        REQUIRE(!Gba::vFlag());
+    }
+
+    SECTION("ORR, set_cond = true") {
+        set_cond = true;
+        
+        // no flags set
+        gba.armOrr(set_cond, 0, 1, 0);
+        REQUIRE(Gba::reg[Gba::R0] == 1);
+        REQUIRE(!Gba::nFlag());
+        REQUIRE(!Gba::zFlag());
+        REQUIRE(!Gba::cFlag());
+        REQUIRE(!Gba::vFlag());
+
+        // set N
+        gba.armOrr(set_cond, 0x80000000, 1, 1);
+        REQUIRE(Gba::reg[Gba::R1] == 0x80000001);
+        REQUIRE(Gba::nFlag());
+        REQUIRE(!Gba::zFlag());
+        REQUIRE(!Gba::cFlag());
+        REQUIRE(!Gba::vFlag());
+
+        // set Z
+        gba.armOrr(set_cond, 0, 0, 2);
+        REQUIRE(Gba::reg[Gba::R2] == 0);
+        REQUIRE(!Gba::nFlag());
+        REQUIRE(Gba::zFlag());
+        REQUIRE(!Gba::cFlag());
+        REQUIRE(!Gba::vFlag());
+    }
+
+    SECTION("ROR, set_cond = false") {
+        uint32_t op;
+        
+        // set_cond = false, ROR #0, no flags set
+        op = 0;
+        gba.armRor(set_cond, 0, op);
+        REQUIRE(op == 0);
+        REQUIRE(!Gba::nFlag());
+        REQUIRE(!Gba::zFlag());
+        REQUIRE(!Gba::cFlag());
+        REQUIRE(!Gba::vFlag());
+
+        // set_cond = false, ROR #0, set C
+        op = 1;
+        gba.armRor(set_cond, 0, op);
+        REQUIRE(op == 0);
+        REQUIRE(!Gba::nFlag());
+        REQUIRE(!Gba::zFlag());
+        REQUIRE(!Gba::cFlag());
+        REQUIRE(!Gba::vFlag());
+
+        // set_cond = false, ROR #0, no flags set
+        op = 0;
+        gba.armRor(set_cond, 0, op);
+        REQUIRE(op == 0);
+        REQUIRE(!Gba::nFlag());
+        REQUIRE(!Gba::zFlag());
+        REQUIRE(!Gba::cFlag());
+        REQUIRE(!Gba::vFlag());
+
+        // set_cond = false, ROR #31, set C
+        op = 0x7fffffff;
+        gba.armRor(set_cond, 31, op);
+        REQUIRE(op == 0xfffffffe);
+        REQUIRE(!Gba::nFlag());
+        REQUIRE(!Gba::zFlag());
+        REQUIRE(!Gba::cFlag());
+        REQUIRE(!Gba::vFlag());
+
+        // set_cond = false, ROR #31, no flags set
+        op = 0x80000000;
+        gba.armRor(set_cond, 31, op);
+        REQUIRE(op == 1);
+        REQUIRE(!Gba::nFlag());
+        REQUIRE(!Gba::zFlag());
+        REQUIRE(!Gba::cFlag());
+        REQUIRE(!Gba::vFlag());
+    }
+
+    SECTION("ROR, set_cond = false") {
+        set_cond = true;
+        uint32_t op;
+        
+        // ROR #0, no flags set
+        op = 0;
+        gba.armRor(set_cond, 0, op);
+        REQUIRE(op == 0);
+        REQUIRE(!Gba::nFlag());
+        REQUIRE(!Gba::zFlag());
+        REQUIRE(!Gba::cFlag());
+        REQUIRE(!Gba::vFlag());
+
+        // ROR #0, set C
+        op = 1;
+        gba.armRor(set_cond, 0, op);
+        REQUIRE(op == 0);
+        REQUIRE(!Gba::nFlag());
+        REQUIRE(!Gba::zFlag());
+        REQUIRE(Gba::cFlag());
+        REQUIRE(!Gba::vFlag());
+
+        // ROR #0, no flags set
+        op = 0;
+        gba.armRor(set_cond, 0, op);
+        REQUIRE(op == 0x80000000);
+        REQUIRE(!Gba::nFlag());
+        REQUIRE(!Gba::zFlag());
+        REQUIRE(!Gba::cFlag());
+        REQUIRE(!Gba::vFlag());
+
+        // ROR #31, set C
+        op = 0x7fffffff;
+        gba.armRor(set_cond, 31, op);
+        REQUIRE(op == 0xfffffffe);
+        REQUIRE(!Gba::nFlag());
+        REQUIRE(!Gba::zFlag());
+        REQUIRE(Gba::cFlag());
+        REQUIRE(!Gba::vFlag());
+
+        // set_cond = false, ROR #31, no flags set
+        op = 0x80000000;
+        gba.armRor(set_cond, 31, op);
+        REQUIRE(op == 1);
+        REQUIRE(!Gba::nFlag());
+        REQUIRE(!Gba::zFlag());
+        REQUIRE(!Gba::cFlag());
+        REQUIRE(!Gba::vFlag());
+    }
+
+    SECTION("RSB, set_cond = false") {
+        // set_cond = false, set N, set C
+        gba.armRsb(set_cond, 0, 0xffffffff, 0);
+        REQUIRE(Gba::reg[Gba::R0] == 0xffffffff);
+        REQUIRE(!Gba::nFlag());
+        REQUIRE(!Gba::zFlag());
+        REQUIRE(!Gba::cFlag());
+        REQUIRE(!Gba::vFlag());
+
+        // set_cond = false, set Z, set C
+        gba.armRsb(set_cond, -1, -1, 1);
+        REQUIRE(Gba::reg[Gba::R1] == 0);
+        REQUIRE(!Gba::nFlag());
+        REQUIRE(!Gba::zFlag());
+        REQUIRE(!Gba::cFlag());
+        REQUIRE(!Gba::vFlag());
+
+        // set_cond = false, set C
+        gba.armRsb(set_cond, 1, 2, 2);
+        REQUIRE(Gba::reg[Gba::R2] == 1);
+        REQUIRE(!Gba::nFlag());
+        REQUIRE(!Gba::zFlag());
+        REQUIRE(!Gba::cFlag());
+        REQUIRE(!Gba::vFlag());
+
+        // set_cond = false, set V
+        gba.armRsb(set_cond, 2, 0x80000000, 3);
+        REQUIRE(Gba::reg[Gba::R3] == 0x7ffffffe);
+        REQUIRE(!Gba::nFlag());
+        REQUIRE(!Gba::zFlag());
+        REQUIRE(!Gba::cFlag());
+        REQUIRE(!Gba::vFlag());
+    }
+
+    SECTION("RSB, set_cond = true") {
+        set_cond = true;
+
+        // set N, set C
+        gba.armRsb(set_cond, 0, 0xffffffff, 0);
+        REQUIRE(Gba::reg[Gba::R0] == 0xffffffff);
+        REQUIRE(Gba::nFlag());
+        REQUIRE(!Gba::zFlag());
+        REQUIRE(Gba::cFlag());
+        REQUIRE(!Gba::vFlag());
+
+        // set Z, set C
+        gba.armRsb(set_cond, -1, -1, 1);
+        REQUIRE(Gba::reg[Gba::R1] == 0);
+        REQUIRE(!Gba::nFlag());
+        REQUIRE(Gba::zFlag());
+        REQUIRE(Gba::cFlag());
+        REQUIRE(!Gba::vFlag());
+
+        // set C
+        gba.armRsb(set_cond, 1, 2, 2);
+        REQUIRE(Gba::reg[Gba::R2] == 1);
+        REQUIRE(!Gba::nFlag());
+        REQUIRE(!Gba::zFlag());
+        REQUIRE(Gba::cFlag());
+        REQUIRE(!Gba::vFlag());
+
+        // set V, set N
+        gba.armRsb(set_cond, -1, 0x7fffffff, 3);
+        REQUIRE(Gba::reg[Gba::R3] == 0x80000000);
+        REQUIRE(Gba::nFlag());
+        REQUIRE(!Gba::zFlag());
+        REQUIRE(!Gba::cFlag());
+        REQUIRE(Gba::vFlag());
+    }
+
+    SECTION("RSC, set_cond = false") {
+        // set_cond = false, set N
+        gba.armRsc(set_cond, 2, 0, 0);
+        REQUIRE(Gba::reg[Gba::R0] == -1);
+        REQUIRE(!Gba::nFlag());
+        REQUIRE(!Gba::zFlag());
+        REQUIRE(!Gba::cFlag());
+        REQUIRE(!Gba::vFlag());
+
+        // set_cond = false, set Z, set C
+        gba.armRsc(set_cond, 2, 1, 1);
+        REQUIRE(Gba::reg[Gba::R1] == 0);
+        REQUIRE(!Gba::nFlag());
+        REQUIRE(!Gba::zFlag());
+        REQUIRE(!Gba::cFlag());
+        REQUIRE(!Gba::vFlag());
+
+        // set_cond = false, set V, set C
+        gba.armRsc(set_cond, 2, 0x80000000, 2);
+        REQUIRE(Gba::reg[Gba::R2] == 0x7fffffff);
+        REQUIRE(!Gba::nFlag());
+        REQUIRE(!Gba::zFlag());
+        REQUIRE(!Gba::cFlag());
+        REQUIRE(!Gba::vFlag());
+    }
+
+    SECTION("RSC, set_cond = true") {
+        set_cond = true;
+
+        // set N
+        gba.armRsc(set_cond, 2, 0, 0);
+        REQUIRE(Gba::reg[Gba::R0] == -1);
+        REQUIRE(Gba::nFlag());
+        REQUIRE(!Gba::zFlag());
+        REQUIRE(!Gba::cFlag());
+        REQUIRE(!Gba::vFlag());
+
+        // set Z, set C
+        gba.armRsc(set_cond, 2, 1, 1);
+        REQUIRE(Gba::reg[Gba::R1] == 0);
+        REQUIRE(!Gba::nFlag());
+        REQUIRE(Gba::zFlag());
+        REQUIRE(Gba::cFlag());
+        REQUIRE(!Gba::vFlag());
+
+        // set V, set C
+        gba.armRsc(set_cond, 2, 0x80000000, 2);
+        REQUIRE(Gba::reg[Gba::R2] == 0x7ffffffe);
+        REQUIRE(!Gba::nFlag());
+        REQUIRE(!Gba::zFlag());
+        REQUIRE(Gba::cFlag());
+        REQUIRE(Gba::vFlag());
+    }
+
+    SECTION("SBC, set_cond = false") {
+        // set_cond = false, set N
+        gba.armSbc(set_cond, 0, 2, 0);
+        REQUIRE(Gba::reg[Gba::R0] == -1);
+        REQUIRE(!Gba::nFlag());
+        REQUIRE(!Gba::zFlag());
+        REQUIRE(!Gba::cFlag());
+        REQUIRE(!Gba::vFlag());
+
+        // set_cond = false, set Z, set C
+        gba.armSbc(set_cond, 1, 2, 1);
+        REQUIRE(Gba::reg[Gba::R1] == 0);
+        REQUIRE(!Gba::nFlag());
+        REQUIRE(!Gba::zFlag());
+        REQUIRE(!Gba::cFlag());
+        REQUIRE(!Gba::vFlag());
+
+        // set_cond = false, set V, set C
+        gba.armSbc(set_cond, 0x80000000, 2, 2);
+        REQUIRE(Gba::reg[Gba::R2] == 0x7fffffff);
+        REQUIRE(!Gba::nFlag());
+        REQUIRE(!Gba::zFlag());
+        REQUIRE(!Gba::cFlag());
+        REQUIRE(!Gba::vFlag());
+    }
+
+    SECTION("SBC, set_cond = true") {
+        set_cond = true;
+
+        // set N
+        gba.armSbc(set_cond, 0, 2, 0);
+        REQUIRE(Gba::reg[Gba::R0] == -1);
+        REQUIRE(Gba::nFlag());
+        REQUIRE(!Gba::zFlag());
+        REQUIRE(!Gba::cFlag());
+        REQUIRE(!Gba::vFlag());
+
+        // set Z, set C
+        gba.armSbc(set_cond, 1, 2, 1);
+        REQUIRE(Gba::reg[Gba::R1] == 0);
+        REQUIRE(!Gba::nFlag());
+        REQUIRE(Gba::zFlag());
+        REQUIRE(Gba::cFlag());
+        REQUIRE(!Gba::vFlag());
+
+        // set V, set C
+        gba.armSbc(set_cond, 0x80000000, 2, 2);
+        REQUIRE(Gba::reg[Gba::R2] == 0x7ffffffe);
+        REQUIRE(!Gba::nFlag());
+        REQUIRE(!Gba::zFlag());
+        REQUIRE(Gba::cFlag());
+        REQUIRE(Gba::vFlag());
+    }
+
+    SECTION("SUB, set_cond = false") {
+        // set_cond = false, set N
+        gba.armSub(set_cond, 0, 1, 0);
+        REQUIRE(Gba::reg[Gba::R0] == -1);
+        REQUIRE(!Gba::nFlag());
+        REQUIRE(!Gba::zFlag());
+        REQUIRE(!Gba::cFlag());
+        REQUIRE(!Gba::vFlag());
+
+        // set_cond = false, set Z, set C
+        gba.armSub(set_cond, 1, 1, 1);
+        REQUIRE(Gba::reg[Gba::R1] == 0);
+        REQUIRE(!Gba::nFlag());
+        REQUIRE(!Gba::zFlag());
+        REQUIRE(!Gba::cFlag());
+        REQUIRE(!Gba::vFlag());
+
+        // set_cond = false, set V, set C
+        gba.armSub(set_cond, 0x80000000, 2, 2);
+        REQUIRE(Gba::reg[Gba::R2] == 0x7ffffffe);
+        REQUIRE(!Gba::nFlag());
+        REQUIRE(!Gba::zFlag());
+        REQUIRE(!Gba::cFlag());
+        REQUIRE(!Gba::vFlag());
+    }
+
+    SECTION("SUB, set_cond = true") {
+        set_cond = true;
+
+        // set N
+        gba.armSub(set_cond, 0, 1, 0);
+        REQUIRE(Gba::reg[Gba::R0] == -1);
+        REQUIRE(Gba::nFlag());
+        REQUIRE(!Gba::zFlag());
+        REQUIRE(!Gba::cFlag());
+        REQUIRE(!Gba::vFlag());
+
+        // set Z, set C
+        gba.armSub(set_cond, 1, 1, 1);
+        REQUIRE(Gba::reg[Gba::R1] == 0);
+        REQUIRE(!Gba::nFlag());
+        REQUIRE(Gba::zFlag());
+        REQUIRE(Gba::cFlag());
+        REQUIRE(!Gba::vFlag());
+
+        // set V, set C
+        gba.armSub(set_cond, 0x80000000, 2, 2);
+        REQUIRE(Gba::reg[Gba::R2] == 0x7ffffffe);
+        REQUIRE(!Gba::nFlag());
+        REQUIRE(!Gba::zFlag());
+        REQUIRE(Gba::cFlag());
+        REQUIRE(Gba::vFlag());
+    }
+
+    SECTION("TEQ") {
+        // no flags set
+        gba.armTeq(0x80000000, 0xffffffff);
+        REQUIRE(!Gba::nFlag());
+        REQUIRE(!Gba::zFlag());
+        REQUIRE(!Gba::cFlag());
+        REQUIRE(!Gba::vFlag());
+
+        // set N
+        gba.armTeq(0x80000000, 0);
+        REQUIRE(Gba::nFlag());
+        REQUIRE(!Gba::zFlag());
+        REQUIRE(!Gba::cFlag());
+        REQUIRE(!Gba::vFlag());
+
+        // set Z
+        gba.armTeq(0xffffffff, 0xffffffff);
+        REQUIRE(!Gba::nFlag());
+        REQUIRE(Gba::zFlag());
+        REQUIRE(!Gba::cFlag());
+        REQUIRE(!Gba::vFlag());
+    }
+
+    SECTION("TST") {
+        // no flags set
+        gba.armTst(1, 1);
+        REQUIRE(!Gba::nFlag());
+        REQUIRE(!Gba::zFlag());
+        REQUIRE(!Gba::cFlag());
+        REQUIRE(!Gba::vFlag());
+
+        // set N
+        gba.armTst(0x80000000, 0x8fffffff);
+        REQUIRE(Gba::nFlag());
+        REQUIRE(!Gba::zFlag());
+        REQUIRE(!Gba::cFlag());
+        REQUIRE(!Gba::vFlag());
+
+        // set Z
+        gba.armTst(0xffffffff, 0);
+        REQUIRE(!Gba::nFlag());
+        REQUIRE(Gba::zFlag());
+        REQUIRE(!Gba::cFlag());
+        REQUIRE(!Gba::vFlag());
     }
 };

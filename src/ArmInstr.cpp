@@ -34,16 +34,16 @@ void Gba::armAnd(bool set_cond, uint32_t op1, uint32_t op2, uint8_t rd) {
 };
 
 void Gba::armAsr(bool set_cond, uint8_t shift_am, uint32_t& op) {
-    uint32_t sign = (op & 0x80000000) == 0x00000000 ? 0x00000000 : 0x80000000;
+    uint32_t sign = (op & 0x80000000) == 0 ? 0 : 0x80000000;
 
     if (shift_am == 0) { // ASR #0 becomes ASR #32; all 0s or 1s result and bit 31 becomes carry out
-        if (set_cond) reg[CPSR] = (sign == 0x00000000 ? reg[CPSR] & 0xdfffffff : reg[CPSR] | 0x20000000);
-        op = (sign == 0x00000000 ? 0x00000000 : 0xffffffff);
+        if (set_cond) reg[CPSR] = (sign == 0 ? reg[CPSR] & 0xdfffffff : reg[CPSR] | 0x20000000);
+        op = (sign == 0 ? 0 : 0xffffffff);
     }else {
         for(uint8_t i = 0; i < (shift_am - 1); ++i) // Most significant shifted out bit needs to be saved in CPSR as the carry out
             op = (op >> 1) | sign;
 
-        if (set_cond) reg[CPSR] = (op & 0x00000001) == 0x00000000 ? reg[CPSR] & 0xdfffffff : reg[CPSR] | 0x20000000;
+        if (set_cond) reg[CPSR] = (op & 0x00000001) == 0 ? reg[CPSR] & 0xdfffffff : reg[CPSR] | 0x20000000;
         op = (op >> 1) | sign;
     }
 };
@@ -64,7 +64,7 @@ void Gba::armBl(uint32_t offset) {
 void Gba::armBx(uint8_t rn) {
     uint32_t w = regRef(rn);
     reg[PC] = w;
-    reg[CPSR] = ((w & 0x00000001) == 0x00000000 ? reg[CPSR] & 0xffffffdf : reg[CPSR] | 0x00000020); // If bit 0 == 0, then ARM; else, THUMB
+    reg[CPSR] = ((w & 0x00000001) == 0 ? reg[CPSR] & 0xffffffdf : reg[CPSR] | 0x00000020); // If bit 0 == 0, then ARM; else, THUMB
 };
 
 void Gba::armCmn(uint32_t op1, uint32_t op2) {
@@ -134,18 +134,18 @@ void Gba::armEor(bool set_cond, uint32_t op1, uint32_t op2, uint8_t rd) {
 void Gba::armLsl(bool set_cond, uint8_t shift_am, uint32_t& op) {
     if (shift_am > 0) {
         op = op << (shift_am - 1); // Least significant shifted out bit needs to be saved in CPSR as the carry out
-        if (set_cond) reg[CPSR] = (op & 0x80000000) == 0x00000000 ? reg[CPSR] & 0xdfffffff : reg[CPSR] | 0x20000000;
+        if (set_cond) reg[CPSR] = (op & 0x80000000) == 0 ? reg[CPSR] & 0xdfffffff : reg[CPSR] | 0x20000000;
         op = op << 1;
     } // Else, use op2 directly (LSL #0)
 };
 
 void Gba::armLsr(bool set_cond, uint8_t shift_am, uint32_t& op) {
     if (shift_am == 0) { // LSR #0 becomes LSR #32; zero result and bit 31 becomes carry out
-        if (set_cond) reg[CPSR] = ((op & 0x80000000) == 0x00000000 ? reg[CPSR] & 0xdfffffff : reg[CPSR] | 0x20000000);
+        if (set_cond) reg[CPSR] = ((op & 0x80000000) == 0 ? reg[CPSR] & 0xdfffffff : reg[CPSR] | 0x20000000);
         op = 0;
     }else {
         op = op >> (shift_am - 1); // Most significant shifted out bit needs to be saved in CPSR as the carry out
-        if (set_cond) reg[CPSR] = ((op & 0x00000001) == 0x00000000 ? reg[CPSR] & 0xdfffffff : reg[CPSR] | 0x20000000);
+        if (set_cond) reg[CPSR] = ((op & 0x00000001) == 0 ? reg[CPSR] & 0xdfffffff : reg[CPSR] | 0x20000000);
         op = op >> 1;
     }
 };
@@ -274,8 +274,8 @@ void Gba::armMrs(uint8_t psr_num, uint8_t rd) { regRef(rd) = reg[psr_num]; };
 
 void Gba::armMsr(uint8_t psr_num, uint32_t w) {
     // * See Figure 4-11: PSR Transfer; bit 16 for distinguishing between MSR (reg contents to PSR) and MSR (reg contents / imm val to PSR flag bits only)
-    if ((w & 0x00010000) == 0x00000000) { // Reg contents / imm val to PSR flags only
-        if ((w & 0x02000000) == 0x00000000) { // Operand is a reg
+    if ((w & 0x00010000) == 0) { // Reg contents / imm val to PSR flags only
+        if ((w & 0x02000000) == 0) { // Operand is a reg
             reg[psr_num] = (reg[psr_num] & 0x0fffffff) | (regRef(static_cast<uint8_t>(w & 0x0000000f)) & 0xf0000000);
         }else { // Operand is an immediate rotated value
             uint8_t rotate = (w & 0x00000f00) >> 8;
@@ -302,17 +302,17 @@ void Gba::armOrr(bool set_cond, uint32_t op1, uint32_t op2, uint8_t rd) {
 void Gba::armRor(bool set_cond, uint8_t shift_am, uint32_t& op) {
     if (shift_am == 0) { // ROR #0 becomes RRX (rotate right extended); bit 0 carried out, and CPSR's carry is carried into bit 31
         uint8_t lsb = op & 0x00000001;
-        op = (op >> 1) | ((reg[CPSR] & 0x2000000) == 0x00000000 ? 0x00000000 : 0x80000000);
-        if (set_cond) reg[CPSR] = lsb == 0x00 ? reg[CPSR] & 0xdfffffff : reg[CPSR] | 0x20000000;
+        op = (op >> 1) | (cFlag() ? 0x80000000 : 0);
+        if (set_cond) reg[CPSR] = (lsb == 0 ? reg[CPSR] & 0xdfffffff : reg[CPSR] | 0x20000000);
     }else {
         for(uint8_t i = 0; i < (shift_am - 1); ++i) { // Most significant shifted out bit needs to be saved in CPSR as the carry out
             uint8_t lsb = op & 0x00000001;
-            op = (op >> 1) | (lsb == 0x00 ? 0x00000000 : 0x80000000);
+            op = (op >> 1) | (lsb == 0 ? 0 : 0x80000000);
         }
 
         uint8_t lsb = op & 0x00000001;
-        if (set_cond) reg[CPSR] = lsb == 0x00 ? reg[CPSR] & 0xdfffffff : reg[CPSR] | 0x20000000;
-        op = (op >> 1) | (lsb == 0x00 ? 0x00000000 : 0x80000000);
+        if (set_cond) reg[CPSR] = (lsb == 0 ? reg[CPSR] & 0xdfffffff : reg[CPSR] | 0x20000000);
+        op = (op >> 1) | (lsb == 0 ? 0 : 0x80000000);
     }
 };
 
@@ -329,7 +329,7 @@ void Gba::armRsb(bool set_cond, uint32_t op1, uint32_t op2, uint8_t rd) {
 };
 
 void Gba::armRsc(bool set_cond, uint32_t op1, uint32_t op2, uint8_t rd) {
-    op1 = op1 - (1 - ((reg[CPSR] & 0x20000000) == 0x20000000 ? 1 : 0));
+    op1 = op1 - (1 - (cFlag() ? 1 : 0));
     bool c_flag = (op1 <= op2);
     bool v_flag = false;
     uint32_t res = op2 - op1;
@@ -342,7 +342,7 @@ void Gba::armRsc(bool set_cond, uint32_t op1, uint32_t op2, uint8_t rd) {
 };
 
 void Gba::armSbc(bool set_cond, uint32_t op1, uint32_t op2, uint8_t rd) {
-    op2 = op2 - (1 - ((reg[CPSR] & 0x20000000) == 0x20000000 ? 1 : 0));
+    op2 = op2 - (1 - (cFlag() ? 1 : 0));
     bool c_flag = (op2 <= op1);
     bool v_flag = false;
     uint32_t res = op1 - op2;
