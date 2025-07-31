@@ -85,7 +85,7 @@ struct Gba {
     static bool insertRom(std::string path);
     static uint32_t armFetch();
     static uint16_t thumbFetch();
-    static void armDecode(uint32_t w);
+    static void armDecode(uint32_t w, std::string* ret_instr_fmt);
     static void thumbDecode(uint16_t half_w);
     static void cycle();
 
@@ -132,8 +132,8 @@ struct Gba {
     static void armRsb(bool set_cond, uint32_t op1, uint32_t op2, uint8_t rd);
     static void armRsc(bool set_cond, uint32_t op1, uint32_t op2, uint8_t rd);
     static void armSbc(bool set_cond, uint32_t op1, uint32_t op2, uint8_t rd);
-    static void armStr();
-    static void armStrb();
+    static void armStr(bool pre_ind, bool add_offset, bool write_back, uint8_t rn, uint8_t rd, uint32_t offset);
+    static void armStrb(bool pre_ind, bool add_offset, bool write_back, uint8_t rn, uint8_t rd, uint32_t offset);
     static void armSub(bool set_cond, uint32_t op1, uint32_t op2, uint8_t rd);
     static void armTeq(uint32_t op1, uint32_t op2);
     static void armTst(uint32_t op1, uint32_t op2);

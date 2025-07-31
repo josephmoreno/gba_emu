@@ -7,4 +7,4 @@ References:
 - https://www.gbadev.org/docs.php
 
 Purpose of this project:\
-Study and learn the architecture of the Gameboy Advance
+Study the architecture of the Gameboy Advance

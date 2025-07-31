@@ -96,40 +96,66 @@ void Gba::armEor(bool set_cond, uint32_t op1, uint32_t op2, uint8_t rd) {
     if (set_cond) armLogSetCond(res, rd);
 };
 
-// void Gba::armLdr(bool pre_ind, bool add_offset, bool write_back, uint8_t rn, uint8_t rd, uint32_t offset) {
-//     uint32_t base = regRef(rn);
-//     uint32_t res_addr = base;
+void Gba::armLdr(bool pre_ind, bool add_offset, bool write_back, uint8_t rn, uint8_t rd, uint32_t offset) {
+    uint32_t base = regRef(rn);
+    uint32_t res_addr = base;
 
-//     if (add_offset)
-//         res_addr += offset;
-//     else // Subtract the offset
-//         res_addr -= offset;
+    if (add_offset)
+        res_addr += offset;
+    else // Subtract the offset
+        res_addr -= offset;
 
-//     if (pre_ind) { // Add offset before transfer (use res_addr)
-//         uint32_t w = 
-//             static_cast<uint32_t>(memRef(res_addr + 3) << 24) |
-//             static_cast<uint32_t>(memRef(res_addr + 2) << 16) |
-//             static_cast<uint32_t>(memRef(res_addr + 1) << 8) |
-//             static_cast<uint32_t>(memRef(res_addr));
+    if (pre_ind) { // Add / subtract offset before transfer (use res_addr)
+        // Need to rotate the bytes if res_addr is not word-aligned
+        uint32_t wa_addr = res_addr; // wa_addr = word-aligned address
+        while((wa_addr % 4) > 0) --wa_addr;
 
-//         regRef(rd) = w;
-//     }else { // Add offset after transfer (use base)
-//         uint32_t w = 
-//             static_cast<uint32_t>(memRef(base + 3) << 24) |
-//             static_cast<uint32_t>(memRef(base + 2) << 16) |
-//             static_cast<uint32_t>(memRef(base + 1) << 8) |
-//             static_cast<uint32_t>(memRef(base));
+        uint32_t w = 
+            (static_cast<uint32_t>(memRef(wa_addr + ((res_addr + 3) % 4))) << 24) |
+            (static_cast<uint32_t>(memRef(wa_addr + ((res_addr + 2) % 4))) << 16) |
+            (static_cast<uint32_t>(memRef(wa_addr + ((res_addr + 1) % 4))) << 8) |
+            static_cast<uint32_t>(memRef(wa_addr + (res_addr % 4)));
 
-//         regRef(rd) = w;
-//     }
+        regRef(rd) = w;
+    }else { // Add offset after transfer (use base)
+        // Need to rotate the bytes if base is not word-aligned
+        uint32_t wa_addr = base;
+        while((wa_addr % 4) > 0) --wa_addr;
 
-//     if (write_back)
-//         regRef(rn) = res_addr;
-// };
+        uint32_t w = 
+            (static_cast<uint32_t>(memRef(wa_addr + ((base + 3) % 4))) << 24) |
+            (static_cast<uint32_t>(memRef(wa_addr + ((base + 2) % 4))) << 16) |
+            (static_cast<uint32_t>(memRef(wa_addr + ((base + 1) % 4))) << 8) |
+            static_cast<uint32_t>(memRef(wa_addr + (base % 4)));
 
-// void Gba::armLdrb(bool pre_ind, bool add_offset, bool write_back, uint8_t rn, uint8_t rd, uint32_t offset) {
+        regRef(rd) = w;
+    }
 
-// };
+    if (write_back)
+        regRef(rn) = res_addr;
+};
+
+void Gba::armLdrb(bool pre_ind, bool add_offset, bool write_back, uint8_t rn, uint8_t rd, uint32_t offset) {
+    uint32_t base = regRef(rn);
+    uint32_t res_addr = base;
+
+    if (add_offset)
+        res_addr += offset;
+    else // Subtract the offset
+        res_addr -= offset;
+
+    // * See 4.9.3, Bytes and words: Selected byte goes to bottom 8 bits of destination reg, rest of bits are 0.
+    if (pre_ind) { // Add / subtract offset before transfer (use res_addr)
+        uint32_t w = static_cast<uint32_t>(memRef(res_addr));
+        regRef(rd) = w;
+    }else { // Add offset after transfer (use base)
+        uint32_t w = static_cast<uint32_t>(memRef(base));
+        regRef(rd) = w;
+    }
+
+    if (write_back)
+        regRef(rn) = res_addr;
+};
 
 void Gba::armLsl(bool set_cond, uint8_t shift_am, uint32_t& op) {
     if (shift_am > 0) {
@@ -352,6 +378,59 @@ void Gba::armSbc(bool set_cond, uint32_t op1, uint32_t op2, uint8_t rd) {
 
     regRef(rd) = res;
     if (set_cond) armAriSetCond(res, c_flag, v_flag, rd);
+};
+
+void Gba::armStr(bool pre_ind, bool add_offset, bool write_back, uint8_t rn, uint8_t rd, uint32_t offset) {
+    uint32_t base = regRef(rn);
+    uint32_t res_addr = base;
+    uint32_t w = regRef(rd);
+
+    if (add_offset)
+        res_addr += offset;
+    else // Subtract the offset
+        res_addr -= offset;
+
+    if (pre_ind) { // Add / subtract offset before transfer (use res_addr)
+        // * See 4.9.3, Bytes and words: STR must generate a word-aligned address
+        uint32_t wa_addr = res_addr; // wa_addr = word-aligned address
+        while((wa_addr % 4) > 0) --wa_addr;
+
+        memRef(wa_addr) = static_cast<uint8_t>(w & 0x000000ff);
+        memRef(wa_addr + 1) = static_cast<uint8_t>((w >> 8) & 0x000000ff);
+        memRef(wa_addr + 2) = static_cast<uint8_t>((w >> 16) & 0x000000ff);
+        memRef(wa_addr + 3) = static_cast<uint8_t>((w >> 24) & 0x000000ff);
+    }else { // Add offset after transfer (use base)
+        uint32_t wa_addr = base;
+        while((wa_addr % 4) > 0) --wa_addr;
+
+        memRef(wa_addr) = static_cast<uint8_t>(w & 0x000000ff);
+        memRef(wa_addr + 1) = static_cast<uint8_t>((w >> 8) & 0x000000ff);
+        memRef(wa_addr + 2) = static_cast<uint8_t>((w >> 16) & 0x000000ff);
+        memRef(wa_addr + 3) = static_cast<uint8_t>((w >> 24) & 0x000000ff);
+    }
+
+    if (write_back)
+        regRef(rn) = res_addr;
+};
+
+
+void Gba::armStrb(bool pre_ind, bool add_offset, bool write_back, uint8_t rn, uint8_t rd, uint32_t offset) {
+    uint32_t base = regRef(rn);
+    uint32_t res_addr = base;
+    uint8_t b = static_cast<uint8_t>(regRef(rd) & 0x000000ff);
+
+    if (add_offset)
+        res_addr += offset;
+    else // Subtract the offset
+        res_addr -= offset;
+
+    if (pre_ind) // Add / subtract offset before transfer (use res_addr)
+        memRef(res_addr) = b;
+    else // Add offset after transfer (use base)
+        memRef(base) = b;
+
+    if (write_back)
+        regRef(rn) = res_addr;
 };
 
 void Gba::armSub(bool set_cond, uint32_t op1, uint32_t op2, uint8_t rd) {

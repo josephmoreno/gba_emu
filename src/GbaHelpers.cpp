@@ -85,7 +85,7 @@ uint32_t Gba::armDpOp2(uint32_t w) {
 void Gba::shiftOp(bool set_cond, uint8_t shift, uint32_t& op) {
     uint8_t shift_t = (shift & 0x06) >> 1;
     uint8_t shift_am = 0;
-    bool instr_spec = (shift & 0x01) == 0x00; // "instruction specified" shift amount
+    bool instr_spec = (shift & 0x01) == 0; // "instruction specified" shift amount
     
     if (instr_spec) // Immediate value
         shift_am = (shift & 0xf8) >> 3;

@@ -582,6 +582,118 @@ TEST_CASE("ARM Instructions", "[ARM, processor, instruction set]") {
         REQUIRE(!Gba::vFlag());
     }
 
+    SECTION("LDR") {
+        Gba::memRef(0) = 0x10;
+        Gba::memRef(1) = 0x32;
+        Gba::memRef(2) = 0x54;
+        Gba::memRef(3) = 0x76;
+        Gba::memRef(4) = 0x98;
+        Gba::memRef(5) = 0xba;
+        Gba::memRef(6) = 0xdc;
+        Gba::memRef(7) = 0xfe;
+
+        // word-aligned, 000 = no pre-index, subtract offset, no write-back
+        Gba::reg[Gba::R0] = 4;
+        gba.armLdr(false, false, false, 0, 1, 0);
+        REQUIRE(Gba::reg[Gba::R1] == 0xfedcba98);
+
+        // 1-byte offset, 000 = no pre-index, subtract offset, no write-back
+        Gba::reg[Gba::R2] = 5;
+        gba.armLdr(false, false, false, 2, 3, 0);
+        REQUIRE(Gba::reg[Gba::R3] == 0x98fedcba);
+
+        // 2-byte offset, 000 = no pre-index, subtract offset, no write-back
+        Gba::reg[Gba::R4] = 2;
+        gba.armLdr(false, false, false, 4, 5, 0);
+        REQUIRE(Gba::reg[Gba::R5] == 0x32107654);
+
+        // 3-byte offset, 000 = no pre-index, subtract offset, no write-back
+        Gba::reg[Gba::R6] = 7;
+        gba.armLdr(false, false, false, 6, 7, 0);
+        REQUIRE(Gba::reg[Gba::R7] == 0xdcba98fe);
+
+        // 3-byte offset, 001 = no pre-index, subtract offset, write-back
+        Gba::reg[Gba::R6] = 7;
+        gba.armLdr(false, false, true, 6, 7, 7);
+        REQUIRE(Gba::reg[Gba::R6] == 0);
+        REQUIRE(Gba::reg[Gba::R7] == 0xdcba98fe);
+
+        // word-aligned, 001 = no pre-index, subtract offset, write-back
+        Gba::reg[Gba::R0] = 4;
+        gba.armLdr(false, false, true, 0, 1, 2);
+        REQUIRE(Gba::reg[Gba::R0] == 2);
+        REQUIRE(Gba::reg[Gba::R1] == 0xfedcba98);
+
+        // word-aligned, 011 = no pre-index, add offset, write-back
+        Gba::reg[Gba::R0] = 4;
+        gba.armLdr(false, true, true, 0, 1, 2);
+        REQUIRE(Gba::reg[Gba::R0] == 6);
+        REQUIRE(Gba::reg[Gba::R1] == 0xfedcba98);
+
+        // 2-byte offset, 111 = pre-index, add offset, write-back
+        Gba::reg[Gba::R2] = 4;
+        gba.armLdr(true, true, true, 2, 3, 2);
+        REQUIRE(Gba::reg[Gba::R2] == 6);
+        REQUIRE(Gba::reg[Gba::R3] == 0xba98fedc);
+
+        // 2-byte offset, 110 = pre-index, add offset, no write-back
+        Gba::reg[Gba::R2] = 4;
+        gba.armLdr(true, true, false, 2, 3, 2);
+        REQUIRE(Gba::reg[Gba::R2] == 4);
+        REQUIRE(Gba::reg[Gba::R3] == 0xba98fedc);
+    }
+
+    SECTION("LDRB") {
+        Gba::memRef(0) = 0x10;
+        Gba::memRef(1) = 0x32;
+        Gba::memRef(2) = 0x54;
+        Gba::memRef(3) = 0x76;
+        Gba::memRef(4) = 0x98;
+        Gba::memRef(5) = 0xba;
+        Gba::memRef(6) = 0xdc;
+        Gba::memRef(7) = 0xfe;
+
+        // 000 = no pre-index, subtract offset, no write-back
+        Gba::reg[Gba::R0] = 4;
+        gba.armLdrb(false, false, false, 0, 1, 0);
+        REQUIRE(Gba::reg[Gba::R1] == 0x00000098);
+
+        // 000 = no pre-index, subtract offset, no write-back
+        Gba::reg[Gba::R2] = 5;
+        gba.armLdrb(false, false, false, 2, 3, 0);
+        REQUIRE(Gba::reg[Gba::R3] == 0x000000ba);
+
+        // 001 = no pre-index, subtract offset, write-back
+        Gba::reg[Gba::R6] = 7;
+        gba.armLdrb(false, false, true, 6, 7, 7);
+        REQUIRE(Gba::reg[Gba::R6] == 0);
+        REQUIRE(Gba::reg[Gba::R7] == 0x000000fe);
+
+        // 001 = no pre-index, subtract offset, write-back
+        Gba::reg[Gba::R0] = 4;
+        gba.armLdrb(false, false, true, 0, 1, 2);
+        REQUIRE(Gba::reg[Gba::R0] == 2);
+        REQUIRE(Gba::reg[Gba::R1] == 0x00000098);
+
+        // 011 = no pre-index, add offset, write-back
+        Gba::reg[Gba::R0] = 4;
+        gba.armLdrb(false, true, true, 0, 1, 2);
+        REQUIRE(Gba::reg[Gba::R0] == 6);
+        REQUIRE(Gba::reg[Gba::R1] == 0x00000098);
+
+        // 111 = pre-index, add offset, write-back
+        Gba::reg[Gba::R2] = 4;
+        gba.armLdrb(true, true, true, 2, 3, 2);
+        REQUIRE(Gba::reg[Gba::R2] == 6);
+        REQUIRE(Gba::reg[Gba::R3] == 0x000000dc);
+
+        // 2-byte offset, 110 = pre-index, add offset, no write-back
+        Gba::reg[Gba::R2] = 4;
+        gba.armLdrb(true, true, false, 2, 3, 2);
+        REQUIRE(Gba::reg[Gba::R2] == 4);
+        REQUIRE(Gba::reg[Gba::R3] == 0x000000dc);
+    }
+
     SECTION("LSL, set_cond = false") {
         uint32_t op;
 
@@ -1535,6 +1647,89 @@ TEST_CASE("ARM Instructions", "[ARM, processor, instruction set]") {
         REQUIRE(!Gba::zFlag());
         REQUIRE(Gba::cFlag());
         REQUIRE(Gba::vFlag());
+    }
+
+    SECTION("STR") {
+        Gba::reg[Gba::R0] = 0x76543210;
+        Gba::reg[Gba::R2] = 0xfedcba98;
+
+        // not word-aligned address, 000 = no pre-index, subtract offset, no write-back
+        Gba::reg[Gba::R3] = 15;
+        gba.armStr(false, false, false, 3, 0, 0);
+        REQUIRE(Gba::memRef(12) == 0x10);
+        REQUIRE(Gba::memRef(13) == 0x32);
+        REQUIRE(Gba::memRef(14) == 0x54);
+        REQUIRE(Gba::memRef(15) == 0x76);
+
+        // 001 = no pre-index, subtract offset, write-back
+        Gba::reg[Gba::R3] = 17;
+        gba.armStr(false, false, true, 3, 0, 1);
+        REQUIRE(Gba::reg[Gba::R3] == 16);
+        REQUIRE(Gba::memRef(16) == 0x10);
+        REQUIRE(Gba::memRef(17) == 0x32);
+        REQUIRE(Gba::memRef(18) == 0x54);
+        REQUIRE(Gba::memRef(19) == 0x76);
+
+        // 011 = no pre-index, add offset, write-back
+        Gba::reg[Gba::R4] = 14;
+        gba.armStr(false, true, true, 4, 2, 2);
+        REQUIRE(Gba::reg[Gba::R4] == 16);
+        REQUIRE(Gba::memRef(12) == 0x98);
+        REQUIRE(Gba::memRef(13) == 0xba);
+        REQUIRE(Gba::memRef(14) == 0xdc);
+        REQUIRE(Gba::memRef(15) == 0xfe);
+
+        // 111 = pre-index, add offset, write-back
+        Gba::reg[Gba::R4] = 14;
+        gba.armStr(true, true, true, 4, 2, 2);
+        REQUIRE(Gba::reg[Gba::R4] == 16);
+        REQUIRE(Gba::memRef(16) == 0x98);
+        REQUIRE(Gba::memRef(17) == 0xba);
+        REQUIRE(Gba::memRef(18) == 0xdc);
+        REQUIRE(Gba::memRef(19) == 0xfe);
+
+        // 110 = pre-index, add offset, no write-back
+        Gba::reg[Gba::R4] = 14;
+        gba.armStr(true, true, false, 4, 0, 2);
+        REQUIRE(Gba::reg[Gba::R4] == 14);
+        REQUIRE(Gba::memRef(16) == 0x10);
+        REQUIRE(Gba::memRef(17) == 0x32);
+        REQUIRE(Gba::memRef(18) == 0x54);
+        REQUIRE(Gba::memRef(19) == 0x76);
+    }
+
+    SECTION("STRB") {
+        Gba::reg[Gba::R0] = 0x765432aa;
+        Gba::reg[Gba::R2] = 0xfedcba55;
+
+        // 000 = no pre-index, subtract offset, no write-back
+        Gba::reg[Gba::R3] = 21;
+        gba.armStrb(false, false, false, 3, 0, 0);
+        REQUIRE(Gba::memRef(21) == 0xaa);
+
+        // 001 = no pre-index, subtract offset, write-back
+        Gba::reg[Gba::R5] = 17;
+        gba.armStrb(false, false, true, 5, 0, 1);
+        REQUIRE(Gba::reg[Gba::R5] == 16);
+        REQUIRE(Gba::memRef(17) == 0xaa);
+
+        // 011 = no pre-index, add offset, write-back
+        Gba::reg[Gba::R4] = 14;
+        gba.armStrb(false, true, true, 4, 2, 2);
+        REQUIRE(Gba::reg[Gba::R4] == 16);
+        REQUIRE(Gba::memRef(14) == 0x55);
+
+        // 111 = pre-index, add offset, write-back
+        Gba::reg[Gba::R4] = 14;
+        gba.armStrb(true, true, true, 4, 2, 2);
+        REQUIRE(Gba::reg[Gba::R4] == 16);
+        REQUIRE(Gba::memRef(16) == 0x55);
+
+        // 110 = pre-index, add offset, no write-back
+        Gba::reg[Gba::R4] = 14;
+        gba.armStrb(true, true, false, 4, 0, 2);
+        REQUIRE(Gba::reg[Gba::R4] == 14);
+        REQUIRE(Gba::memRef(16) == 0xaa);
     }
 
     SECTION("SUB, set_cond = false") {

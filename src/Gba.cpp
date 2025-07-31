@@ -102,7 +102,7 @@ uint16_t Gba::thumbFetch() {
     return(half_w);
 };
 
-void Gba::armDecode(uint32_t w) {
+void Gba::armDecode(uint32_t w, std::string* ret_instr_fmt = nullptr) {
     // PSR[31:28] = [N, Z, C, V]; N = negative / less than, Z = zero, C = carry / borrow / extend, V = overflow
     // All ARM instructions have a condition bit-field (most significant nibble)
     /* 
@@ -165,7 +165,7 @@ void Gba::armDecode(uint32_t w) {
         // Only executes if condition is true
         // If operand register's bit 0 == 0, subsequent instructions are ARM; else if 1, THUMB
         
-        if (debug) std::cout << "Branch and Exchange" << std::endl;
+        if (ret_instr_fmt != nullptr) *ret_instr_fmt = "Branch and Exchange";
         if (cond) armBx(static_cast<uint8_t>(w & 0x0000000f));
 
     }else {
@@ -173,10 +173,10 @@ void Gba::armDecode(uint32_t w) {
 
         if ((instr_code & 0x0fb00ff0) == 0x01000090) {
             // Single Data Swap / Half-Word Data Transfer: Register Offset, SWP
-            if (debug) std::cout << "Single Data Swap" << std::endl;
+            if (ret_instr_fmt != nullptr) *ret_instr_fmt = "Single Data Swap";
         }else if ((instr_code & 0x0e400f90) == 0x00000090 && (instr_code & 0x00000060) != 0) {
             // Half-Word Data Transfer: Register Offset, Not SWP; [6:5] must not equal 0b00
-            if (debug) std::cout << "Half-Word Data Transfer: Register Offset" << std::endl;
+            if (ret_instr_fmt != nullptr) *ret_instr_fmt = "Half-Word Data Transfer: Register Offset";
         }else {
             instr_code = instr_code & 0x0ff000f0;
 
@@ -184,7 +184,7 @@ void Gba::armDecode(uint32_t w) {
                 // Multiply: MUL and MLA
                 // Only executes if condition is true
 
-                if (debug) std::cout << "Multiply" << std::endl;
+                if (ret_instr_fmt != nullptr) *ret_instr_fmt = "Multiply";
 
                 if (cond) {
                     uint32_t a = w & 0x00200000;        // Accumulate field
@@ -202,7 +202,7 @@ void Gba::armDecode(uint32_t w) {
                 // Multiply Long: MULL and MLAL
                 // Only executes if condition is true
 
-                if (debug) std::cout << "Multiply Long" << std::endl;
+                if (ret_instr_fmt != nullptr) *ret_instr_fmt = "Multiply Long";
 
                 if (cond) {
                     bool sign = (w & 0x00400000) == 0x00400000; // Unsigned field; true = signed operands
@@ -219,36 +219,36 @@ void Gba::armDecode(uint32_t w) {
 
             }else if ((instr_code & 0x0e400090) == 0x00400090) {
                 // Half-Word Data Transfer: Immediate Offset
-                if (debug) std::cout << "Half-Word Data Transfer: Immediate Offset" << std::endl;
+                if (ret_instr_fmt != nullptr) *ret_instr_fmt = "Half-Word Data Transfer: Immediate Offset";
             }else {
                 instr_code = instr_code & 0x0f000010;
 
                 if (instr_code == 0x0e000000) {
                     // Co-Processor Data Operation
                     // * Don't need, GBA doesn't have co-processor
-                    if (debug) std::cout << "Co-Processor Data Operation" << std::endl;
+                    if (ret_instr_fmt != nullptr) *ret_instr_fmt = "Co-Processor Data Operation";
                 }else if (instr_code == 0x0e000010) {
                     // Co-Processor Register Transfer
                     // * Don't need, GBA doesn't have co-processor
-                    if (debug) std::cout << "Co-Processor Register Transfer" << std::endl;
+                    if (ret_instr_fmt != nullptr) *ret_instr_fmt = "Co-Processor Register Transfer";
                 }else if ((instr_code & 0x0e000010) == 0x06000010) {
                     // Undefined
-                    if (debug) std::cout << "Undefined" << std::endl;
+                    if (ret_instr_fmt != nullptr) *ret_instr_fmt = "Undefined";
                 }else {
                     instr_code = instr_code & 0x0f000000;
 
                     if (instr_code == 0x0f000000) {
                         // Software Interrupt
-                        if (debug) std::cout << "Software Interrupt" << std::endl;
+                        if (ret_instr_fmt != nullptr) *ret_instr_fmt = "Software Interrupt";
                     }else if ((instr_code & 0x0e000000) == 0x08000000) {
                         // Block Data Transfer
-                        if (debug) std::cout << "Block Data Transfer" << std::endl;
+                        if (ret_instr_fmt != nullptr) *ret_instr_fmt = "Block Data Transfer";
                     }else if ((instr_code & 0x0e000000) == 0x0a000000) {
                         // Branch and Branch with Link
                         // Only executes if condition is true
                         // * prefetch?
 
-                        if (debug) std::cout << "Branch and Branch with Link" << std::endl;
+                        if (ret_instr_fmt != nullptr) *ret_instr_fmt = "Branch and Branch with Link";
                         
                         if (cond) {
                             uint32_t offset = (w & 0x00ffffff) << 2;    // uint or int, doesn't matter; should overflow into the correct value either way
@@ -261,11 +261,11 @@ void Gba::armDecode(uint32_t w) {
                     }else if ((instr_code & 0x0e000000) == 0x0c000000) {
                         // Co-Processor Data Transfer
                         // * Don't need, GBA doesn't have co-processor
-                        if (debug) std::cout << "Co-Processor Data Transfer" << std::endl;
+                        if (ret_instr_fmt != nullptr) *ret_instr_fmt = "Co-Processor Data Transfer";
                     }else if ((instr_code & 0x0c000000) == 0x00000000) {
                         // Data Processing / PSR Transfer
 
-                        if (debug) std::cout << "Data Processing / PSR Transfer" << std::endl;
+                        if (ret_instr_fmt != nullptr) *ret_instr_fmt = "Data Processing / PSR Transfer";
 
                         if (cond) {
                             bool set_cond = (w & 0x00100000) == 0x00100000;
@@ -309,35 +309,36 @@ void Gba::armDecode(uint32_t w) {
 
                     }else if ((instr_code & 0x0c000000) == 0x04000000) {
                         // Single Data Transfer
-                        if (debug) std::cout << "Single Data Transfer" << std::endl;
+                        if (ret_instr_fmt != nullptr) *ret_instr_fmt = "Single Data Transfer";
 
-                        // if (cond) {
-                        //     bool imm_offset = (w & 0x02000000) == 0x00000000; // true = imm, false = from reg
-                        //     bool pre_ind = (w & 0x01000000) == 0x01000000; // true = pre, false = post
-                        //     bool add_offset = (w & 0x00800000) == 0x00800000; // true = add offset, false = subtract offset
-                        //     bool word_transfer = (w & 0x00400000) == 0x00000000; // true = word transfer, false = byte transfer
-                        //     bool write_back = (w & 0x00200000) == 0x00200000; // true = write address into base, false = no write-back
-                        //     bool load = (w & 0x00100000) == 0x00100000; // true = load from memory, false = store to memory
-                        //     uint8_t rn = (w & 0x000f0000) >> 16; // base reg
-                        //     uint8_t rd = (w & 0x0000f000) >> 12; // source / dest reg
-                        //     uint32_t offset = 0;
+                        if (cond) {
+                            bool imm_offset = (w & 0x02000000) == 0x00000000; // true = imm, false = from reg
+                            bool pre_ind = (w & 0x01000000) == 0x01000000; // true = pre, false = post
+                            bool add_offset = (w & 0x00800000) == 0x00800000; // true = add offset, false = subtract offset
+                            bool word_transfer = (w & 0x00400000) == 0x00000000; // true = word transfer, false = byte transfer
+                            bool write_back = (w & 0x00200000) == 0x00200000; // true = write address into base, false = no write-back
+                            bool load = (w & 0x00100000) == 0x00100000; // true = load from memory, false = store to memory
+                            uint8_t rn = (w & 0x000f0000) >> 16; // base reg
+                            uint8_t rd = (w & 0x0000f000) >> 12; // source / dest reg
+                            uint32_t offset = 0;
 
-                        //     if (imm_offset) offset = w & 0x00000fff;
-                        //     else {
-                        //         offset = regRef(static_cast<uint8_t>(w & 0x0000000f));
-                        //         uint8_t shift = (w & 0x00000fe0) >> 4; // "fe" because shift amount cannot be reg-specified; bit 0 should always be 0
-                        //         shiftOp(false, shift, offset); // offset passed by ref
-                        //     }
+                            if (imm_offset)
+                                offset = w & 0x00000fff;
+                            else {
+                                offset = regRef(static_cast<uint8_t>(w & 0x0000000f));
+                                uint8_t shift = (w & 0x00000fe0) >> 4; // * See 4.9.2, Shifted register offset: "fe" because shift amount cannot be reg-specified; bit 0 should always be 0
+                                shiftOp(false, shift, offset); // offset passed by ref
+                            }
 
-                        //     // * See 4.9.3: Bytes and words; ignore BIGEND signal because GBA is always little endian
-                        //     if (load) {
-                        //         if (word_transfer) armLdr(pre_ind, add_offset, write_back, rn, rd, offset);
-                        //         else armLdrb(pre_ind, add_offset, write_back, rn, rd, offset);
-                        //     }else {
-                        //         if (word_transfer) armStr();
-                        //         else armStrb();
-                        //     }
-                        // }
+                            // * See 4.9.3: Bytes and words; ignore BIGEND signal because GBA is always little endian
+                            if (load) {
+                                if (word_transfer) armLdr(pre_ind, add_offset, write_back, rn, rd, offset);
+                                else armLdrb(pre_ind, add_offset, write_back, rn, rd, offset);
+                            }else {
+                                if (word_transfer) armStr(pre_ind, add_offset, write_back, rn, rd, offset);
+                                else armStrb(pre_ind, add_offset, write_back, rn, rd, offset);
+                            }
+                        }
                     }
                 }
             }
