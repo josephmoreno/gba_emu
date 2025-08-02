@@ -117,6 +117,9 @@ struct Gba {
     static void armEor(bool set_cond, uint32_t op1, uint32_t op2, uint8_t rd);
     static void armLdr(bool pre_ind, bool add_offset, bool write_back, uint8_t rn, uint8_t rd, uint32_t offset);
     static void armLdrb(bool pre_ind, bool add_offset, bool write_back, uint8_t rn, uint8_t rd, uint32_t offset);
+    static void armLdrh(bool pre_ind, bool add_offset, bool write_back, uint8_t rn, uint8_t rd, uint32_t offset);
+    static void armLdrsb(bool pre_ind, bool add_offset, bool write_back, uint8_t rn, uint8_t rd, uint32_t offset);
+    static void armLdrsh(bool pre_ind, bool add_offset, bool write_back, uint8_t rn, uint8_t rd, uint32_t offset);
     static void armLsl(bool set_cond, uint8_t shift_am, uint32_t& op);
     static void armLsr(bool set_cond, uint8_t shift_am, uint32_t& op);
     static void armMla(bool set_cond, uint32_t op1, uint32_t op2, uint32_t acc, uint8_t rd);
@@ -134,6 +137,7 @@ struct Gba {
     static void armSbc(bool set_cond, uint32_t op1, uint32_t op2, uint8_t rd);
     static void armStr(bool pre_ind, bool add_offset, bool write_back, uint8_t rn, uint8_t rd, uint32_t offset);
     static void armStrb(bool pre_ind, bool add_offset, bool write_back, uint8_t rn, uint8_t rd, uint32_t offset);
+    static void armStrh(bool pre_ind, bool add_offset, bool write_back, uint8_t rn, uint8_t rd, uint32_t offset);
     static void armSub(bool set_cond, uint32_t op1, uint32_t op2, uint8_t rd);
     static void armTeq(uint32_t op1, uint32_t op2);
     static void armTst(uint32_t op1, uint32_t op2);

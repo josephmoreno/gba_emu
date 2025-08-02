@@ -173,10 +173,37 @@ void Gba::armDecode(uint32_t w, std::string* ret_instr_fmt = nullptr) {
 
         if ((instr_code & 0x0fb00ff0) == 0x01000090) {
             // Single Data Swap / Half-Word Data Transfer: Register Offset, SWP
-            if (ret_instr_fmt != nullptr) *ret_instr_fmt = "Single Data Swap";
+            if (ret_instr_fmt != nullptr) *ret_instr_fmt = "Half-Word Data Transfer: Register Offset, SWP";
+
+            if (cond) {
+
+            }
         }else if ((instr_code & 0x0e400f90) == 0x00000090 && (instr_code & 0x00000060) != 0) {
             // Half-Word Data Transfer: Register Offset, Not SWP; [6:5] must not equal 0b00
-            if (ret_instr_fmt != nullptr) *ret_instr_fmt = "Half-Word Data Transfer: Register Offset";
+            if (ret_instr_fmt != nullptr) *ret_instr_fmt = "Half-Word Data Transfer: Register Offset, Not SWP";
+
+            if (cond) {
+                bool pre_ind = (w & 0x01000000) == 0x01000000; // true = pre-index, false = post-index
+                bool add_offset = (w & 0x00800000) == 0x00800000; // true = add offset, false = subtract offset
+                bool write_back = (w & 0x00200000) == 0x00200000; // true = write back to base reg, false = don't write back
+                bool load = (w & 0x00100000) == 0x00100000; // true = load from mem, false = store to mem
+                bool s = (w & 0x00000040) == 0x00000040; // true = signed, false = unsigned
+                bool h = (w & 0x00000020) == 0x00000020; // true = half-word, false = byte
+                uint8_t rn = static_cast<uint8_t>((w & 0x000f0000) >> 16);
+                uint8_t rd = static_cast<uint8_t>((w & 0x0000f000) >> 12);
+                uint32_t offset = regRef(static_cast<uint8_t>(w & 0x0000000f));
+
+                if (load) {
+                    if (!s && h) armLdrh(pre_ind, add_offset, write_back, rn, rd, offset);
+                    else if (s && !h) armLdrsb(pre_ind, add_offset, write_back, rn, rd, offset);
+                    else armLdrsh(pre_ind, add_offset, write_back, rn, rd, offset);
+                }else {
+                    if (!s) { // * See 4.10.3, Signed byte and half-word loads: If storing into memory, should be unsigned
+                        if (h) armStrh(pre_ind, add_offset, write_back, rn, rd, offset);
+                        else armStrb(pre_ind, add_offset, write_back, rn, rd, offset);
+                    }
+                }
+            }
         }else {
             instr_code = instr_code & 0x0ff000f0;
 
@@ -218,8 +245,11 @@ void Gba::armDecode(uint32_t w, std::string* ret_instr_fmt = nullptr) {
                 }
 
             }else if ((instr_code & 0x0e400090) == 0x00400090) {
-                // Half-Word Data Transfer: Immediate Offset
-                if (ret_instr_fmt != nullptr) *ret_instr_fmt = "Half-Word Data Transfer: Immediate Offset";
+                // Single Data Swap / Half-Word Data Transfer: Immediate Offset, SWP
+                if (ret_instr_fmt != nullptr) *ret_instr_fmt = "Half-Word Data Transfer: Immediate Offset, SWP";
+            }else if ((instr_code & 0x0e400090) == 0x00400090 && (instr_code & 0x00000060) != 0) {
+                // Half-Word Data Transfer: Immediate Offset, Not SWP
+                if (ret_instr_fmt != nullptr) *ret_instr_fmt = "Half-Word Data Transfer: Immediate Offset, Not SWP";
             }else {
                 instr_code = instr_code & 0x0f000010;
 
@@ -243,6 +273,10 @@ void Gba::armDecode(uint32_t w, std::string* ret_instr_fmt = nullptr) {
                     }else if ((instr_code & 0x0e000000) == 0x08000000) {
                         // Block Data Transfer
                         if (ret_instr_fmt != nullptr) *ret_instr_fmt = "Block Data Transfer";
+
+                        if (cond) {
+                            
+                        }
                     }else if ((instr_code & 0x0e000000) == 0x0a000000) {
                         // Branch and Branch with Link
                         // Only executes if condition is true
