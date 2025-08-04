@@ -80,6 +80,7 @@ struct Gba {
     };
 
     static uint32_t reg[];
+    static uint32_t temp_reg;
 
     static void init(bool init);
     static bool insertRom(std::string path);
@@ -101,6 +102,7 @@ struct Gba {
     static bool zFlag();
     static bool cFlag();
     static bool vFlag();
+    static void setMode(uint8_t mode);
     static bool isArm(); // true = ARM, false = THUMB
 
     // ARM Instructions
@@ -115,6 +117,7 @@ struct Gba {
     static void armCmn(uint32_t op1, uint32_t op2);
     static void armCmp(uint32_t op1, uint32_t op2);
     static void armEor(bool set_cond, uint32_t op1, uint32_t op2, uint8_t rd);
+    static void armLdm(bool pre_ind, bool add_offset, bool s, bool write_back, uint8_t rn, uint16_t reg_list);
     static void armLdr(bool pre_ind, bool add_offset, bool write_back, uint8_t rn, uint8_t rd, uint32_t offset);
     static void armLdrb(bool pre_ind, bool add_offset, bool write_back, uint8_t rn, uint8_t rd, uint32_t offset);
     static void armLdrh(bool pre_ind, bool add_offset, bool write_back, uint8_t rn, uint8_t rd, uint32_t offset);
@@ -135,10 +138,12 @@ struct Gba {
     static void armRsb(bool set_cond, uint32_t op1, uint32_t op2, uint8_t rd);
     static void armRsc(bool set_cond, uint32_t op1, uint32_t op2, uint8_t rd);
     static void armSbc(bool set_cond, uint32_t op1, uint32_t op2, uint8_t rd);
+    static void armStm(bool pre_ind, bool add_offset, bool s, bool write_back, uint8_t rn, uint16_t reg_list);
     static void armStr(bool pre_ind, bool add_offset, bool write_back, uint8_t rn, uint8_t rd, uint32_t offset);
     static void armStrb(bool pre_ind, bool add_offset, bool write_back, uint8_t rn, uint8_t rd, uint32_t offset);
     static void armStrh(bool pre_ind, bool add_offset, bool write_back, uint8_t rn, uint8_t rd, uint32_t offset);
     static void armSub(bool set_cond, uint32_t op1, uint32_t op2, uint8_t rd);
+    static void armSwp(bool word, uint8_t rn, uint8_t rd, uint8_t rm);
     static void armTeq(uint32_t op1, uint32_t op2);
     static void armTst(uint32_t op1, uint32_t op2);
 

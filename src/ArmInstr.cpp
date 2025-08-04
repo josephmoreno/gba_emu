@@ -96,6 +96,94 @@ void Gba::armEor(bool set_cond, uint32_t op1, uint32_t op2, uint8_t rd) {
     if (set_cond) armLogSetCond(res, rd);
 };
 
+void Gba::armLdm(bool pre_ind, bool add_offset, bool s, bool write_back, uint8_t rn, uint16_t reg_list) {
+    uint32_t addr = regRef(rn) & 0xfffffffc; // word-aligned address from base reg
+
+    bool revert_mode = false;
+    uint8_t cur_mode = static_cast<uint8_t>(reg[CPSR] & 0x0000001f);
+    if (s && (reg_list & 0x8000) == 0x0000) {
+        setMode(USR); // * See 4.11.4, Use of the S bit: PC not in reg_list and S set means user bank registers are used
+        write_back = false;
+        revert_mode = true;
+    }else if (s && (reg_list & 0x8000) == 0x8000) {
+        switch(cur_mode) {
+            case FIQ:
+                reg[CPSR] = reg[SPSR_fiq];
+                break;
+
+            case SVC:
+                reg[CPSR] = reg[SPSR_svc];
+                break;
+
+            case ABT:
+                reg[CPSR] = reg[SPSR_abt];
+                break;
+
+            case IRQ:
+                reg[CPSR] = reg[SPSR_irq];
+                break;
+
+            case UND:
+                reg[CPSR] = reg[SPSR_und];
+                break;
+
+            default:
+                revert_mode = true;
+                break;
+        }
+    }
+
+    for(uint8_t i = 0; i < 16; ++i) {
+        uint32_t offset_addr = addr;
+        uint8_t reg_num;
+        uint32_t w;
+
+        if (add_offset) {
+            bool in_list = (reg_list & 0x0001) == 0x0001;
+            reg_list = reg_list >> 1;
+
+            if (!in_list) continue; // Register not in list; go to next iteration
+
+            reg_num = i;
+            offset_addr += 4;
+        }else{
+            bool in_list = (reg_list & 0x8000) == 0x8000;
+            reg_list = reg_list << 1;
+
+            if (!in_list) continue;
+
+            reg_num = 15 - i;
+            offset_addr -= 4;
+        }
+
+        if (reg_num == rn)
+            write_back = false; // * See 4.11.2, Addressing modes: Any write back to the base register is overwritten by the load operation
+
+        if (pre_ind) {
+            w = 
+                (static_cast<uint32_t>(memRef(offset_addr + 3)) << 24) |
+                (static_cast<uint32_t>(memRef(offset_addr + 2)) << 16) |
+                (static_cast<uint32_t>(memRef(offset_addr + 1)) << 8) |
+                static_cast<uint32_t>(memRef(offset_addr));
+        }else {
+            w = 
+                (static_cast<uint32_t>(memRef(addr + 3)) << 24) |
+                (static_cast<uint32_t>(memRef(addr + 2)) << 16) |
+                (static_cast<uint32_t>(memRef(addr + 1)) << 8) |
+                static_cast<uint32_t>(memRef(addr));
+        }
+
+        regRef(reg_num) = w;
+        addr = offset_addr;
+    }
+
+    if (write_back)
+        regRef(rn) = addr;
+
+    if (revert_mode)
+        setMode(cur_mode);
+}
+
 void Gba::armLdr(bool pre_ind, bool add_offset, bool write_back, uint8_t rn, uint8_t rd, uint32_t offset) {
     uint32_t base = regRef(rn);
     uint32_t res_addr = base;
@@ -463,6 +551,60 @@ void Gba::armSbc(bool set_cond, uint32_t op1, uint32_t op2, uint8_t rd) {
     if (set_cond) armAriSetCond(res, c_flag, v_flag, rd);
 };
 
+void Gba::armStm(bool pre_ind, bool add_offset, bool s, bool write_back, uint8_t rn, uint16_t reg_list) {
+    uint32_t addr = regRef(rn) & 0xfffffffc; // word-aligned address from base reg
+
+    uint8_t cur_mode = static_cast<uint8_t>(reg[CPSR] & 0x0000001f);
+    if (s) {
+        setMode(USR); // * See 4.11.4, Use of the S bit: S set means user bank registers are used
+        write_back = false;
+    }
+
+    for(uint8_t i = 0; i < 16; ++i) {
+        uint32_t offset_addr = addr;
+        uint8_t reg_num;
+
+        if (add_offset) {
+            bool in_list = (reg_list & 0x0001) == 0x0001;
+            reg_list = reg_list >> 1;
+
+            if (!in_list) continue; // Register not in list; go to next iteration
+
+            reg_num = i;
+            offset_addr += 4;
+        }else{
+            bool in_list = (reg_list & 0x8000) == 0x8000;
+            reg_list = reg_list << 1;
+
+            if (!in_list) continue;
+
+            reg_num = 15 - i;
+            offset_addr -= 4;
+        }
+
+        uint32_t w = regRef(reg_num);
+
+        if (pre_ind) {
+            memRef(offset_addr + 3) = static_cast<uint8_t>(w >> 24);
+            memRef(offset_addr + 2) = static_cast<uint8_t>(w >> 16);
+            memRef(offset_addr + 1) = static_cast<uint8_t>(w >> 8);
+            memRef(offset_addr) = static_cast<uint8_t>(w);
+        }else {
+            memRef(addr + 3) = static_cast<uint8_t>(w >> 24);
+            memRef(addr + 2) = static_cast<uint8_t>(w >> 16);
+            memRef(addr + 1) = static_cast<uint8_t>(w >> 8);
+            memRef(addr) = static_cast<uint8_t>(w);
+        }
+
+        addr = offset_addr;
+    }
+
+    if (write_back)
+        regRef(rn) = addr;
+
+    setMode(cur_mode);
+}
+
 void Gba::armStr(bool pre_ind, bool add_offset, bool write_back, uint8_t rn, uint8_t rd, uint32_t offset) {
     uint32_t base = regRef(rn);
     uint32_t res_addr = base;
@@ -549,6 +691,18 @@ void Gba::armSub(bool set_cond, uint32_t op1, uint32_t op2, uint8_t rd) {
     regRef(rd) = res;
     if (set_cond) armAriSetCond(res, c_flag, v_flag, rd);
 };
+
+void Gba::armSwp(bool word, uint8_t rn, uint8_t rd, uint8_t rm) {
+    if (word) {
+        armLdr(true, false, false, rn, 16, 0);  // Load from memory into temp_reg
+        armStr(true, false, false, rn, rm, 0);  // Write to memory from source reg
+        regRef(rd) = temp_reg;                  // Put temp_reg value into dest reg
+    }else {
+        armLdrb(true, false, false, rn, 16, 0);
+        armStrb(true, false, false, rn, rm, 0);
+        regRef(rd) = temp_reg;
+    }
+}
 
 void Gba::armTeq(uint32_t op1, uint32_t op2) {
     uint32_t res = op1 ^ op2;

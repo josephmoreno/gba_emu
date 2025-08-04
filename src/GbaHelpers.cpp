@@ -23,7 +23,9 @@ uint32_t& Gba::regRef(uint8_t reg_num) {
             case UND: return(reg[R13_und + (reg_num - 0x0d)]);
             default: return(reg[reg_num]);
         }
-    }else
+    }else if (reg_num > 15)
+        return(temp_reg);
+    else
         return(reg[reg_num]);
 };
 
@@ -185,4 +187,5 @@ bool Gba::nFlag() { return((reg[CPSR] & 0x80000000) == 0x80000000); }
 bool Gba::zFlag() { return((reg[CPSR] & 0x40000000) == 0x40000000); }
 bool Gba::cFlag() { return((reg[CPSR] & 0x20000000) == 0x20000000); }
 bool Gba::vFlag() { return((reg[CPSR] & 0x10000000) == 0x10000000); }
+void Gba::setMode(uint8_t mode) { reg[CPSR] = (reg[CPSR] & 0xffffffe0) | static_cast<uint32_t>(mode & 0x1f); }
 bool Gba::isArm() { return((reg[CPSR] & 0x00000020) == 0); }

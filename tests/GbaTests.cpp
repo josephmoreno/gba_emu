@@ -27,7 +27,7 @@ TEST_CASE("GBA Initial State", "[reset, init]") {
     }
 
     REQUIRE(Gba::reg[Gba::PC] == Gba::pak_rom0_offset);
-    REQUIRE(Gba::reg[Gba::CPSR] == 0x00000013);
+    REQUIRE(Gba::reg[Gba::CPSR] == 0x000000d3);
 };
 
 TEST_CASE("GBA Helper Functions", "[helper functions, memory management]") {

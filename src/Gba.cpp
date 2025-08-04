@@ -21,6 +21,7 @@ uint32_t Gba::pak_size = 0;
 
 // ARM CPU Registers
 uint32_t Gba::reg[Reg::REG_COUNT];
+uint32_t Gba::temp_reg;
 
 bool Gba::debug = false;
 
@@ -46,7 +47,7 @@ void Gba::init(bool debug) {
     }
 
     reg[PC] = pak_rom0_offset;
-    reg[CPSR] = 0x00000013; // N, Z, C, V flags 0; SVC Mode
+    reg[CPSR] = 0x000000d3; // N, Z, C, V flags 0; SVC Mode, set I and F, clear T
 };
 
 bool Gba::insertRom(std::string path) {
@@ -172,15 +173,20 @@ void Gba::armDecode(uint32_t w, std::string* ret_instr_fmt = nullptr) {
         instr_code = instr_code & 0x0ff00ff0;
 
         if ((instr_code & 0x0fb00ff0) == 0x01000090) {
-            // Single Data Swap / Half-Word Data Transfer: Register Offset, SWP
-            if (ret_instr_fmt != nullptr) *ret_instr_fmt = "Half-Word Data Transfer: Register Offset, SWP";
+            // Single Data Swap
+            if (ret_instr_fmt != nullptr) *ret_instr_fmt = "Single Data Swap";
 
             if (cond) {
+                bool word = (w & 0x00400000) == 0; // true = word size, false = byte size
+                uint8_t rn = static_cast<uint8_t>((w & 0x000f0000) >> 16);
+                uint8_t rd = static_cast<uint8_t>((w & 0x0000f000) >> 12);
+                uint8_t rm = static_cast<uint8_t>(w & 0x0000000f);
 
+                armSwp(word, rn, rd, rm);
             }
         }else if ((instr_code & 0x0e400f90) == 0x00000090 && (instr_code & 0x00000060) != 0) {
-            // Half-Word Data Transfer: Register Offset, Not SWP; [6:5] must not equal 0b00
-            if (ret_instr_fmt != nullptr) *ret_instr_fmt = "Half-Word Data Transfer: Register Offset, Not SWP";
+            // Half-Word Data Transfer: Register Offset; [6:5] must not equal 0b00 otherwise it's a SWP instruction
+            if (ret_instr_fmt != nullptr) *ret_instr_fmt = "Half-Word Data Transfer: Register Offset";
 
             if (cond) {
                 bool pre_ind = (w & 0x01000000) == 0x01000000; // true = pre-index, false = post-index
@@ -244,12 +250,9 @@ void Gba::armDecode(uint32_t w, std::string* ret_instr_fmt = nullptr) {
                     else armMull(set_cond, sign, op1, op2, rd_h, rd_l);
                 }
 
-            }else if ((instr_code & 0x0e400090) == 0x00400090) {
-                // Single Data Swap / Half-Word Data Transfer: Immediate Offset, SWP
-                if (ret_instr_fmt != nullptr) *ret_instr_fmt = "Half-Word Data Transfer: Immediate Offset, SWP";
             }else if ((instr_code & 0x0e400090) == 0x00400090 && (instr_code & 0x00000060) != 0) {
-                // Half-Word Data Transfer: Immediate Offset, Not SWP
-                if (ret_instr_fmt != nullptr) *ret_instr_fmt = "Half-Word Data Transfer: Immediate Offset, Not SWP";
+                // Half-Word Data Transfer: Immediate Offset
+                if (ret_instr_fmt != nullptr) *ret_instr_fmt = "Half-Word Data Transfer: Immediate Offset";
             }else {
                 instr_code = instr_code & 0x0f000010;
 
@@ -275,7 +278,18 @@ void Gba::armDecode(uint32_t w, std::string* ret_instr_fmt = nullptr) {
                         if (ret_instr_fmt != nullptr) *ret_instr_fmt = "Block Data Transfer";
 
                         if (cond) {
-                            
+                            bool pre_ind = (w & 0x01000000) == 0x01000000; // true = pre-index, false = post-index
+                            bool add_offset = (w & 0x00800000) == 0x00800000; // true = add offset, false = subtract offset
+                            bool s = (w & 0x00400000) == 0x00400000; // true = load PSR or force user mode, false = don't do either
+                            bool write_back = (w & 0x00200000) == 0x00200000; // true = write back to base reg, false = don't
+                            bool load = (w & 0x00100000) == 0x00100000; // true = load from memory, false = store to memory
+                            uint8_t rn = static_cast<uint8_t>((w & 0x000f0000) >> 16);
+                            uint16_t reg_list = static_cast<uint16_t>(w & 0x0000ffff);
+
+                            if (load)
+                                armLdm(pre_ind, add_offset, s, write_back, rn, reg_list);
+                            else
+                                armStm(pre_ind, add_offset, s, write_back, rn, reg_list);
                         }
                     }else if ((instr_code & 0x0e000000) == 0x0a000000) {
                         // Branch and Branch with Link
